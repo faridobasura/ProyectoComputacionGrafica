@@ -1,0 +1,37 @@
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.ipch
+*.db
+*.opendb
+*.VC.db
+
+# Build directories
+x64/
+x86/
+Debug/
+Release/
+bin/
+obj/
+
+# Archivos compilados
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+
+# Archivos de usuario
+*.user
+*.aps
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IntelliSense
+ipch/
+*.VC.db
