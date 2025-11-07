@@ -30,7 +30,28 @@
 #include <cubemap.h>
 
 #include <irrKlang.h>
+#include <algorithm> 
+
+
 using namespace irrklang;
+
+//Cajas de colisiones
+struct AABB {
+    glm::vec3 min;
+    glm::vec3 max;
+
+    AABB() : min(0.0f), max(0.0f) {}
+    AABB(glm::vec3 min, glm::vec3 max) : min(min), max(max) {}
+};
+
+//Objetos colisionables
+struct CollidableObject {
+    Model* model;
+    glm::vec3 position;
+    AABB boundingBox;
+    glm::vec3 scale;
+    float rotationY;
+};
 
 // --- ESTRUCTURA DE OBJETO INTERACTIVO (MODIFICADA) ---
 struct InteractiveObject {
@@ -48,12 +69,11 @@ struct InteractiveObject {
     glm::vec3   inspectTargetOffset; // Punto de mira (relativo a la posición del objeto)
     glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
 
-    // Constructor para facilitar la creación (MODIFICADO)
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n, 
-                      glm::vec3 targetOffset, glm::vec3 camPos) : // <-- Nuevos parámetros
+                      glm::vec3 targetOffset, glm::vec3 camPos) : 
         model(m), position(pos), triggerRadius(radius), name(n),
         inspectRotationY(0.0f), inspectRotationX(0.0f), isAutoRotatingY(false),
-        inspectTargetOffset(targetOffset), inspectCamPos(camPos) // <-- Se guardan
+        inspectTargetOffset(targetOffset), inspectCamPos(camPos) 
     { } 
 };
 // --- FIN DE ESTRUCTURA ---
@@ -61,6 +81,11 @@ struct InteractiveObject {
 // Functions
 bool Start();
 bool Update();
+bool CheckCollision(const AABB& a, const AABB& b);
+AABB CalculateWorldAABB(const CollidableObject& obj);
+AABB GetCharacterBoundingBox();
+bool CheckCharacterCollision();
+void InitializeCollidableObjects();
 
 // Definición de callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -90,12 +115,46 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float elapsedTime = 0.0f;
 
-// Variables del personaje
+//Variables para las colisiones
+std::vector<CollidableObject> g_collidableObjects;
+AABB characterBoundingBox;
+
+// Variables para debug de colisiones
+Shader* debugShader;
+unsigned int debugVAO, debugVBO;
+bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
+
+//Origen
+glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
+
 glm::vec3 position(0.0f, 0.0f, 0.0f);
+
+
+// Variables del personaje
+glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 20.0f);
 glm::vec3 forwardView(0.0f, 0.0f, 1.0f);
 float       trdpersonOffset = 1.5f;
-float       scaleV = 0.025f;
 float       rotateCharacter = 0.0f;
+bool character_run = false;
+float walkSpeed = 0.05f;
+float runSpeed = 0.1f;
+float       scaleV = walkSpeed;
+
+float characterHeight = 2.0f;      // Altura del personaje
+float characterRadius = 0.2f;      // Radio para colisión cilíndrica
+float collisionOffset = 1.0f;      // Margen de seguridad
+
+
+// Posiciones de los objetos
+glm::vec3 estatuaPos = glm::vec3(0.0f, 0.0f, 0.0f); // Origen
+glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
+glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
+glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
+glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
+glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
+glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
+glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
+glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 
 // Shaders
@@ -106,8 +165,18 @@ Shader* wavesShader;
 Shader* cubemapShader;
 Shader* dynamicShader;
 
-// Carga la información del modelo
+// Carga la información de los modelo
 Model* museo; // Entorno
+
+Model* Xiucoatl;
+Model* piramide;
+Model* PiedraDelSol;
+Model* Coatlicue;
+Model* PlatoAntiguo;
+Model* Craneo;
+Model* Incenciario;
+Model* Xochipilli;
+Model* Bracero;
 
 // Modelos animados
 AnimatedModel* character01;
@@ -138,6 +207,7 @@ InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que esta
 bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
 bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
 
+
 // --- VARIABLES CÁMARA DE INSPECCIÓN ---
 float g_inspectZoom = 45.0f; // --- ¡NUEVO! Variable para el zoom (inicia en 45 grados de FOV) ---
 // --- FIN DE VARIABLES ---
@@ -159,6 +229,66 @@ int main()
     return 0;
 
 }
+
+void CreateDebugCube() {
+    float vertices[] = {
+        // Líneas del cubo (12 líneas = 24 vértices)
+        // Cara frontal
+        -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,
+
+         // Cara trasera
+         -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,
+         -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
+         -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,
+          0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
+
+          // Conectores
+          -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f,
+          -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f,
+           0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,
+           0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f
+    };
+
+    glGenVertexArrays(1, &debugVAO);
+    glGenBuffers(1, &debugVBO);
+
+    glBindVertexArray(debugVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, debugVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+}
+
+void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projection, glm::mat4 view) {
+    if (!showCollisionBoxes) return;
+
+    debugShader->use();
+
+    // Calcular centro y tamaño
+    glm::vec3 center = (box.min + box.max) * 0.5f;
+    glm::vec3 size = box.max - box.min;
+
+    // Matriz de transformación
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, center);
+    model = glm::scale(model, size);
+
+    debugShader->setMat4("model", model);
+    debugShader->setMat4("view", view);
+    debugShader->setMat4("projection", projection);
+    debugShader->setVec3("color", color);
+
+    glBindVertexArray(debugVAO);
+    glDrawArrays(GL_LINES, 0, 24); // 12 líneas * 2 vértices = 24 vértices
+    glBindVertexArray(0);
+}
+
 
 bool Start() {
     // Inicialización de GLFW
@@ -197,33 +327,25 @@ bool Start() {
     wavesShader = new Shader("shaders/13_wavesAnimation.vs", "shaders/13_wavesAnimation.fs");
     cubemapShader = new Shader("shaders/10_vertex_cubemap.vs", "shaders/10_fragment_cubemap.fs");
     dynamicShader = new Shader("shaders/10_vertex_skinning-IT.vs", "shaders/10_fragment_skinning-IT.fs");
+    debugShader = new Shader("shaders/shader_debug.vs", "shaders/shader_debug.fs");
+    CreateDebugCube();
 
     // Máximo número de huesos: 100
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
     // --- Carga de modelos modulares ---
     museo = new Model("models/IllumModels/proyectofinal/Entorno.fbx");
-    Model* Xiucoatl = new Model("models/IllumModels/estatua.fbx");
-    Model* piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
-    Model* PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
-    Model* Coatlicue = new Model("models/IllumModels/proyectofinal/Coatlicue.fbx");
-    Model* PlatoAntiguo = new Model("models/IllumModels/proyectofinal/PlatoAntiguo.fbx");
-    Model* Craneo = new Model("models/IllumModels/proyectofinal/Craneo.fbx");
-    Model* Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
-    Model* Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
-    Model* Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
+    Xiucoatl = new Model("models/IllumModels/estatua.fbx");
+    piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
+    PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
+    Coatlicue = new Model("models/IllumModels/proyectofinal/Coatlicue.fbx");
+    PlatoAntiguo = new Model("models/IllumModels/proyectofinal/PlatoAntiguo.fbx");
+    Craneo = new Model("models/IllumModels/proyectofinal/Craneo.fbx");
+    Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
+    Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
+    Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
     character01 = new AnimatedModel("models/character.fbx");
 
-    // Definimos las posiciones de los objetos
-    glm::vec3 estatuaPos = glm::vec3(0.0f, 0.0f, 0.0f); // Origen
-    glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
-    glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
-    glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
-    glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
-    glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
-    glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
-    glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
-    glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
     
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
@@ -288,8 +410,9 @@ bool Start() {
     mainCubeMap = new CubeMap();
     mainCubeMap->loadCubemap(faces);
 
-    camera3rd.Position = position;
-    camera3rd.Position.y += 1.7f;
+    camera3rd.Position = character_position;
+    camera3rd.Position.y += 5.8f;
+    camera3rd.Position.x += 5.7f;
     camera3rd.Position -= trdpersonOffset * forwardView;
     camera3rd.Front = forwardView;
 
@@ -315,6 +438,9 @@ bool Start() {
     gLights.push_back(light04);
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
+
+     // --- INICIALIZAR COLISIONES ---
+    InitializeCollidableObjects();
 
     return true;
 }
@@ -366,7 +492,7 @@ bool Update() {
     if (g_interactingObject == nullptr) {
         bool foundNearby = false;
         for (auto& obj : g_interactiveObjects) {
-            float distance = glm::distance(position, obj.position); // Distancia del personaje al objeto
+            float distance = glm::distance(position_origin, obj.position); // Distancia del personaje al objeto
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
                 foundNearby = true;
@@ -442,71 +568,95 @@ bool Update() {
 
     {
         mLightsShader->use();
-
-        // Activamos para objetos transparentes
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        mLightsShader->setMat4("projection", projection);
-        mLightsShader->setMat4("view", view);
-
-        // Configuramos propiedades de fuentes de luz
-        mLightsShader->setInt("numLights", (int)gLights.size());
-        for (size_t i = 0; i < gLights.size(); ++i) {
-            SetLightUniformVec3(mLightsShader, "Position", i, gLights[i].Position);
-            SetLightUniformVec3(mLightsShader, "Direction", i, gLights[i].Direction);
-            SetLightUniformVec4(mLightsShader, "Color", i, gLights[i].Color);
-            SetLightUniformVec4(mLightsShader, "Power", i, gLights[i].Power);
-            SetLightUniformInt(mLightsShader, "alphaIndex", i, gLights[i].alphaIndex);
-            SetLightUniformFloat(mLightsShader, "distance", i, gLights[i].distance);
-        }
-
-        mLightsShader->setVec3("eye", camera.Position);
-
-        // Aplicamos propiedades materiales
-        mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
-        mLightsShader->setVec4("MaterialDiffuseColor", material01.diffuse);
-        mLightsShader->setVec4("MaterialSpecularColor", material01.specular);
-        mLightsShader->setFloat("transparency", material01.transparency);
+        if (mLightsShader->ID != 0) {
 
 
-        // --- BUCLE DE DIBUJADO MODIFICADO ---
 
-        // 1. Dibujar el entorno (el museo)
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); 
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); 
-        mLightsShader->setMat4("model", model);
-        museo->Draw(*mLightsShader);
-        
-        // 2. Dibujar TODOS los objetos interactivos
-        for (auto& obj : g_interactiveObjects) {
-            model = glm::mat4(1.0f);
-            // 1. Mover al lugar correcto
-            model = glm::translate(model, obj.position);
-            
-            // Aplicamos las rotaciones de inspección guardadas en el objeto
-            // 2. Rotar en Y (controlado por auto-rotación)
-            model = glm::rotate(model, obj.inspectRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
-            // 3. Rotar en X (ya no se usa)
-            model = glm::rotate(model, obj.inspectRotationX, glm::vec3(1.0f, 0.0f, 0.0f));
-            // --- FIN DE NUEVA LÓGICA ---
+            // Activamos para objetos transparentes
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            // 4. Aplicar rotación base de FBX (la que tenías)
+            mLightsShader->setMat4("projection", projection);
+            mLightsShader->setMat4("view", view);
+
+            // Configuramos propiedades de fuentes de luz
+            mLightsShader->setInt("numLights", (int)gLights.size());
+            for (size_t i = 0; i < gLights.size(); ++i) {
+                SetLightUniformVec3(mLightsShader, "Position", i, gLights[i].Position);
+                SetLightUniformVec3(mLightsShader, "Direction", i, gLights[i].Direction);
+                SetLightUniformVec4(mLightsShader, "Color", i, gLights[i].Color);
+                SetLightUniformVec4(mLightsShader, "Power", i, gLights[i].Power);
+                SetLightUniformInt(mLightsShader, "alphaIndex", i, gLights[i].alphaIndex);
+                SetLightUniformFloat(mLightsShader, "distance", i, gLights[i].distance);
+            }
+
+            mLightsShader->setVec3("eye", camera.Position);
+
+            // Aplicamos propiedades materiales
+            mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
+            mLightsShader->setVec4("MaterialDiffuseColor", material01.diffuse);
+            mLightsShader->setVec4("MaterialSpecularColor", material01.specular);
+            mLightsShader->setFloat("transparency", material01.transparency);
+
+            // --- BUCLE DE DIBUJADO MODIFICADO ---
+
+            // 1. Dibujar el entorno (el museo)
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
             mLightsShader->setMat4("model", model);
-            obj.model->Draw(*mLightsShader); // Dibuja el modelo del objeto
+            museo->Draw(*mLightsShader);
+
+            // 2. Dibujar TODOS los objetos interactivos
+            for (auto& obj : g_interactiveObjects) {
+                model = glm::mat4(1.0f);
+                // 1. Mover al lugar correcto
+                model = glm::translate(model, obj.position);
+
+                // Aplicamos las rotaciones de inspección guardadas en el objeto
+                // 2. Rotar en Y (controlado por auto-rotación)
+                model = glm::rotate(model, obj.inspectRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
+                // 3. Rotar en X (ya no se usa)
+                model = glm::rotate(model, obj.inspectRotationX, glm::vec3(1.0f, 0.0f, 0.0f));
+                // --- FIN DE NUEVA LÓGICA ---
+
+                // 4. Aplicar rotación base de FBX (la que tenías)
+                model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+                mLightsShader->setMat4("model", model);
+                obj.model->Draw(*mLightsShader); // Dibuja el modelo del objeto
+            }
+            // --- FIN DE BUCLE DE DIBUJADO ---
         }
-        // --- FIN DE BUCLE DE DIBUJADO ---
+
+        glUseProgram(0);
+
     }
+    //Dibujo de cajas para debug
+    if (showCollisionBoxes) {
+        if (!debugShader || debugShader->ID == 0) {
+            std::cout << "Shader debug no disponible" << std::endl;
+            showCollisionBoxes = false;
+        }
+        else {
+            // Solo dibujar si el shader está listo
+            for (const auto& obj : g_collidableObjects) {
+                AABB worldAABB = CalculateWorldAABB(obj);
+                DrawBoundingBox(worldAABB, glm::vec3(1.0f, 0.0f, 0.0f), projection, view);
+            }
 
-    glUseProgram(0);
+            AABB charAABB = GetCharacterBoundingBox();
+            DrawBoundingBox(charAABB, glm::vec3(0.0f, 1.0f, 0.0f), projection, view);
 
-
-    // ... (Se omiten Actividad 5.2 y 5.3)
-
+            for (const auto& obj : g_interactiveObjects) {
+                AABB triggerBox;
+                triggerBox.min = obj.position - glm::vec3(obj.triggerRadius, 0.1f, obj.triggerRadius);
+                triggerBox.max = obj.position + glm::vec3(obj.triggerRadius, 2.0f, obj.triggerRadius);
+                DrawBoundingBox(triggerBox, glm::vec3(0.0f, 0.0f, 1.0f), projection, view);
+            }
+        }
+    }
 
     // Objeto animado
     {
@@ -521,7 +671,7 @@ bool Update() {
 
         // Aplicamos transformaciones del modelo
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, position); // translate it down so it's at the center of the scene
+        model = glm::translate(model, character_position); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));  // it's a bit too big for our scene, so scale it down
 
@@ -540,9 +690,112 @@ bool Update() {
     glfwSwapBuffers(window);
     glfwPollEvents();
 
+
     return true;
 }
 
+
+bool CheckCollision(const AABB& a, const AABB& b) {
+    return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
+        (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+        (a.min.z <= b.max.z && a.max.z >= b.min.z);
+}
+
+AABB CalculateWorldAABB(const CollidableObject& obj) {
+    AABB worldAABB;
+    worldAABB.min = obj.position + obj.boundingBox.min * obj.scale;
+    worldAABB.max = obj.position + obj.boundingBox.max * obj.scale;
+    return worldAABB;
+}
+
+AABB GetCharacterBoundingBox() {
+    AABB charAABB;
+    charAABB.min = character_position - glm::vec3(characterRadius, 0.0f, characterRadius);
+    charAABB.max = character_position + glm::vec3(characterRadius, characterHeight, characterRadius);
+    return charAABB;
+}
+
+bool CheckCharacterCollision() {
+    AABB charAABB = GetCharacterBoundingBox();
+
+    for (int i = 0; i < g_collidableObjects.size(); i++) {
+        AABB objAABB = CalculateWorldAABB(g_collidableObjects[i]);
+        bool collision = CheckCollision(charAABB, objAABB);
+
+    }
+    return false;
+}
+
+void UpdateInteractionsWithCollision() {
+    g_nearbyObject = nullptr;
+
+    if (g_interactingObject == nullptr) {
+        for (auto& obj : g_interactiveObjects) {
+            float distance = glm::distance(position_origin, obj.position);
+            if (distance < obj.triggerRadius) {
+                g_nearbyObject = &obj;
+                std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
+                break;
+            }
+        }
+    }
+}
+
+void InitializeCollidableObjects() {
+    // Museo
+    //g_collidableObjects.push_back({museo, glm::vec3(0.0f, 0.0f, 0.0f), 
+    //    AABB(glm::vec3(-0.5f, 0.0f, -0.5f),   // ← MUCHO más pequeño
+    //        glm::vec3(0.5f, 2.0f, 0.5f)),    // ← MUCHO más pequeño
+    //        glm::vec3(1.0f), 0.0f
+    //});
+
+    // Estatuas y objetos interactivos
+    g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
+                                  AABB(glm::vec3(-10.0f, 0.0f, -10.0f),   // min (x, y, z)
+                                        glm::vec3(10.0f, 10.0f, 10.0f)),  // max (x, y, z),    // ← Más pequeño
+                                        glm::vec3(1.0f), 0.0f });
+    /*
+    g_collidableObjects.push_back({ piramide, piramidePos,
+                                  AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
+                                       glm::vec3(3.0f, 4.0f, 3.0f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    // Agregar más objetos aquí...
+    g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
+                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
+                                       glm::vec3(4.0f, 2.0f, 4.0f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
+                                  AABB(glm::vec3(-1.5f, 0.0f, -1.5f),
+                                       glm::vec3(1.5f, 3.0f, 1.5f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ PlatoAntiguo, PlatoAntiguoPos,
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 0.5f, 1.0f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ Craneo, CraneoPos,
+                                  AABB(glm::vec3(-0.5f, 0.0f, -0.5f),
+                                       glm::vec3(0.5f, 0.5f, 0.5f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ Incenciario, IncenciarioPos,
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 2.0f, 1.0f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ Xochipilli, XochipilliPos,
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 2.0f, 1.0f)),
+                                  glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ Bracero, BraceroPos,
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 1.5f, 1.0f)),
+                                  glm::vec3(1.0f), 0.0f });*/
+}
 // Procesamos entradas del teclado
 void processInput(GLFWwindow* window)
 {
@@ -564,6 +817,49 @@ void processInput(GLFWwindow* window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        static bool keyPressed = false;
+        if (!keyPressed) {
+            showCollisionBoxes = !showCollisionBoxes;
+            if (showCollisionBoxes && (!debugShader || debugShader->ID == 0)) {
+                std::cout << "No se puede activar debug - shader no disponible" << std::endl;
+                showCollisionBoxes = false;
+            }
+            else {
+                std::cout << "Debug colisiones: " << (showCollisionBoxes ? "ACTIVADO" : "DESACTIVADO") << std::endl;
+            }
+            keyPressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
+        static bool keyPressed = false;
+        keyPressed = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        static bool shiftPressed = false;
+        if (!shiftPressed) {
+            character_run = !character_run;  // ← TOGGLE (alternar)
+
+            if (character_run) {
+                scaleV = runSpeed;
+                std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl;
+            }
+            else {
+                scaleV = walkSpeed;
+                std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
+            }
+
+            shiftPressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
+        static bool shiftPressed = false;
+        shiftPressed = false;
+        character_run = false;
+    }
+
     // --- Fin controles ---
 
 
@@ -628,20 +924,55 @@ void processInput(GLFWwindow* window)
     if (g_interactingObject == nullptr) {
         // Character movement
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-            position = position + scaleV * forwardView;
-            camera3rd.Front = forwardView;
-            camera3rd.ProcessKeyboard(FORWARD, deltaTime);
-            camera3rd.Position = position;
-            camera3rd.Position.y += 1.7f;
-            camera3rd.Position -= trdpersonOffset * forwardView;
+            glm::vec3 newPosition = character_position + scaleV * forwardView;
+
+            // Guardar posición actual para revertir si hay colisión
+            glm::vec3 oldPosition = character_position;
+
+            // Verificar colisión ANTES de mover
+            character_position = newPosition;  // ← SOLO ESTA LÍNEA MUEVE
+            if (CheckCharacterCollision()) {
+                character_position = oldPosition; // Revertir movimiento
+            }
+            else {
+                // Solo actualizar la cámara (NO volver a mover el personaje)
+                camera3rd.Front = forwardView;
+                camera3rd.ProcessKeyboard(FORWARD, deltaTime);
+                camera3rd.Position = character_position;
+                camera3rd.Position.y += 1.7f;
+                camera3rd.Position -= trdpersonOffset * forwardView;
+
+                // También actualizar cámara primera persona
+                camera.Position = character_position;
+                camera.Position.y += 1.7f;
+                camera.Front = forwardView;
+            }
         }
+
         if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-            position = position - scaleV * forwardView;
-            camera3rd.Front = forwardView;
-            camera3rd.ProcessKeyboard(BACKWARD, deltaTime);
-            camera3rd.Position = position;
-            camera3rd.Position.y += 1.7f;
-            camera3rd.Position -= trdpersonOffset * forwardView;
+            glm::vec3 newPosition = character_position - scaleV * forwardView;  // ← RESTAR aquí
+
+            // Guardar posición actual para revertir si hay colisión
+            glm::vec3 oldPosition = character_position;
+
+            // Verificar colisión ANTES de mover
+            character_position = newPosition;  // ← SOLO ESTA LÍNEA MUEVE
+            if (CheckCharacterCollision()) {
+                character_position = oldPosition; // Revertir movimiento
+            }
+            else {
+                // Solo actualizar la cámara (NO volver a mover el personaje)
+                camera3rd.Front = forwardView;
+                camera3rd.ProcessKeyboard(BACKWARD, deltaTime);
+                camera3rd.Position = character_position;
+                camera3rd.Position.y += 1.7f;
+                camera3rd.Position -= trdpersonOffset * forwardView;
+
+                // También actualizar cámara primera persona
+                camera.Position = character_position;
+                camera.Position.y += 1.7f;
+                camera.Front = forwardView;
+            }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
             rotateCharacter += 0.5f;
@@ -653,9 +984,13 @@ void processInput(GLFWwindow* window)
             forwardView = glm::normalize(forwardView);
 
             camera3rd.Front = forwardView;
-            camera3rd.Position = position;
-            camera3rd.Position.y += 1.7f; 
+            camera3rd.Position = character_position;
+            camera3rd.Position.y += 1.7f;
             camera3rd.Position -= trdpersonOffset * forwardView;
+
+            camera.Position = character_position;
+            camera.Position.y += 1.7f;
+            camera.Front -= forwardView;
         }
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
             rotateCharacter -= 0.5f;
@@ -667,9 +1002,15 @@ void processInput(GLFWwindow* window)
             forwardView = glm::normalize(forwardView);
 
             camera3rd.Front = forwardView;
-            camera3rd.Position = position;
+            camera3rd.Position = character_position;
             camera3rd.Position.y += 1.7f;
             camera3rd.Position -= trdpersonOffset * forwardView;
+
+            camera.Position = character_position;
+            camera.Position.y += 1.7f;
+            camera.Front -= forwardView;
+
+
         }
     } // Fin de if (g_interactingObject == nullptr)
     // --- FIN DE CONGELAR MOVIMIENTO ---
@@ -742,3 +1083,4 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
+
