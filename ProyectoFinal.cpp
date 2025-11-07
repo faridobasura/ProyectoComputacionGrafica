@@ -100,9 +100,26 @@ GLFWwindow* window;
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
+// Variables del personaje
+glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 20.0f);
+glm::vec3 forwardView(0.0f, 0.0f, -1.0f);
+glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f))); //camarad e hombro
+
+float       thirdpersonOffset = 0.8f;
+float       rotateCharacter = 180.0f;
+bool character_run = false;
+float walkSpeed = 0.05f;
+float runSpeed = 0.2f;
+float       scaleV = walkSpeed;
+
+float characterHeight = 2.0f;      // Altura del personaje
+float characterRadius = 0.2f;      // Radio para colisión cilíndrica
+float collisionOffset = 1.0f;      // Margen de seguridad
+
 // Definición de cámara (posición en XYZ)
-Camera camera(glm::vec3(0.0f, 2.0f, 10.0f));
-Camera camera3rd(glm::vec3(0.0f, 0.0f, 0.0f));
+Camera camera_float(glm::vec3(0.0f, 2.0f, 10.0f));
+Camera camera1st = character_position + glm::vec3(0.0f, 1.8f, 0.0f);
+Camera camera3rd = character_position + glm::vec3(0.0f, 0.8f, -0.05f);
 
 // Controladores para el movimiento del mouse
 float lastX = SCR_WIDTH / 2.0f;
@@ -128,21 +145,6 @@ bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 
 glm::vec3 position(0.0f, 0.0f, 0.0f);
-
-
-// Variables del personaje
-glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 20.0f);
-glm::vec3 forwardView(0.0f, 0.0f, 1.0f);
-float       trdpersonOffset = 1.5f;
-float       rotateCharacter = 0.0f;
-bool character_run = false;
-float walkSpeed = 0.05f;
-float runSpeed = 0.1f;
-float       scaleV = walkSpeed;
-
-float characterHeight = 2.0f;      // Altura del personaje
-float characterRadius = 0.2f;      // Radio para colisión cilíndrica
-float collisionOffset = 1.0f;      // Margen de seguridad
 
 
 // Posiciones de los objetos
@@ -411,10 +413,15 @@ bool Start() {
     mainCubeMap->loadCubemap(faces);
 
     camera3rd.Position = character_position;
-    camera3rd.Position.y += 5.8f;
-    camera3rd.Position.x += 5.7f;
-    camera3rd.Position -= trdpersonOffset * forwardView;
+    camera3rd.Position.y += 0.9f;
+    camera3rd.Position -= thirdpersonOffset * forwardView;
+    camera3rd.Position += 0.5f * rightView;
     camera3rd.Front = forwardView;
+
+    camera1st.Position = character_position;
+    camera1st.Position += 0.8f;
+    //camera1st.Position -= forwardView;
+    camera1st.Front = forwardView;
 
     // Lights configuration
     Light light01;
@@ -549,15 +556,24 @@ bool Update() {
     else
     {
         if (activeCamera) {
-            // Cámara en primera persona
-            projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-            view = camera.GetViewMatrix();
+            if (activeCamera == 0) {
+                // Cámara flotante
+                projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+                view = camera_float.GetViewMatrix();
+            }
+            else if (activeCamera == 1) {
+                // Cámara en tercera persona
+                projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+                view = camera3rd.GetViewMatrix();
+            }
+            else if (activeCamera == 2) {
+                // Cámara flotante
+                projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+                view = camera1st.GetViewMatrix();
+            }
         }
-        else {
-            // cámara en tercera persona
-            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-            view = camera3rd.GetViewMatrix();
-        }
+        
+
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
@@ -590,7 +606,7 @@ bool Update() {
                 SetLightUniformFloat(mLightsShader, "distance", i, gLights[i].distance);
             }
 
-            mLightsShader->setVec3("eye", camera.Position);
+            mLightsShader->setVec3("eye", camera1st.Position);
 
             // Aplicamos propiedades materiales
             mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
@@ -673,6 +689,7 @@ bool Update() {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, character_position); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
+
         model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));  // it's a bit too big for our scene, so scale it down
 
         dynamicShader->setMat4("model", model);
@@ -804,13 +821,15 @@ void processInput(GLFWwindow* window)
 
     // --- Controles de cámara y debug ---
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        camera_float.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        camera_float.ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        camera_float.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        camera_float.ProcessKeyboard(RIGHT, deltaTime);
+
+
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
@@ -939,13 +958,14 @@ void processInput(GLFWwindow* window)
                 camera3rd.Front = forwardView;
                 camera3rd.ProcessKeyboard(FORWARD, deltaTime);
                 camera3rd.Position = character_position;
-                camera3rd.Position.y += 1.7f;
-                camera3rd.Position -= trdpersonOffset * forwardView;
+                camera3rd.Position.y += 0.8f;
+                camera3rd.Position -= thirdpersonOffset * forwardView;
+                camera3rd.Position += 0.5f * rightView;
 
                 // También actualizar cámara primera persona
-                camera.Position = character_position;
-                camera.Position.y += 1.7f;
-                camera.Front = forwardView;
+                camera1st.Position = character_position;
+                camera1st.Position += 0.8f;
+                camera1st.Front = forwardView;
             }
         }
 
@@ -965,17 +985,22 @@ void processInput(GLFWwindow* window)
                 camera3rd.Front = forwardView;
                 camera3rd.ProcessKeyboard(BACKWARD, deltaTime);
                 camera3rd.Position = character_position;
-                camera3rd.Position.y += 1.7f;
-                camera3rd.Position -= trdpersonOffset * forwardView;
+                camera3rd.Position.y += 0.8f;
+                camera3rd.Position -= thirdpersonOffset * forwardView;
+                camera3rd.Position += 0.5f * rightView;
 
                 // También actualizar cámara primera persona
-                camera.Position = character_position;
-                camera.Position.y += 1.7f;
-                camera.Front = forwardView;
+                camera1st.Position = character_position;
+                camera1st.Position += 0.8f;
+                camera1st.Front = forwardView;
             }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-            rotateCharacter += 0.5f;
+            rotateCharacter += 0.2f;
+
+            if (character_run == true) {
+                rotateCharacter += 1.5f;
+            }
 
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -983,17 +1008,25 @@ void processInput(GLFWwindow* window)
             forwardView = glm::vec3(viewVector);
             forwardView = glm::normalize(forwardView);
 
+            rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+
             camera3rd.Front = forwardView;
             camera3rd.Position = character_position;
-            camera3rd.Position.y += 1.7f;
-            camera3rd.Position -= trdpersonOffset * forwardView;
+            camera3rd.Position.y += 0.8f;
+            camera3rd.Position -= thirdpersonOffset * forwardView;
+            camera3rd.Position += 0.5f * rightView;
 
-            camera.Position = character_position;
-            camera.Position.y += 1.7f;
-            camera.Front -= forwardView;
+            camera1st.Position = character_position;
+            camera1st.Position += 0.8f;
+            camera1st.Front -= forwardView;
         }
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-            rotateCharacter -= 0.5f;
+            rotateCharacter -= 0.2f;
+
+            if (character_run == true) {
+                rotateCharacter -= 1.0f;
+            }
 
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -1001,26 +1034,62 @@ void processInput(GLFWwindow* window)
             forwardView = glm::vec3(viewVector);
             forwardView = glm::normalize(forwardView);
 
+            rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+
             camera3rd.Front = forwardView;
             camera3rd.Position = character_position;
-            camera3rd.Position.y += 1.7f;
-            camera3rd.Position -= trdpersonOffset * forwardView;
+            camera3rd.Position.y += 0.8;
+            camera3rd.Position -= thirdpersonOffset * forwardView;
+            camera3rd.Position += 0.5f * rightView;
 
-            camera.Position = character_position;
-            camera.Position.y += 1.7f;
-            camera.Front -= forwardView;
+            camera1st.Position = character_position;
+            camera1st.Position += 0.8f;
+            camera1st.Front -= forwardView;
 
 
         }
     } // Fin de if (g_interactingObject == nullptr)
     // --- FIN DE CONGELAR MOVIMIENTO ---
 
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+        static bool f1Pressed = false;
+        if (!f1Pressed) {
+            activeCamera = 0;
+            std::cout << "float" << std::endl;
+            f1Pressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_RELEASE) {
+        static bool f1Pressed = false;
+        f1Pressed = false;
+    }
 
-    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS)
-        activeCamera = 0;
-    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS)
-        activeCamera = 1;
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
+        static bool f2Pressed = false;
+        if (!f2Pressed) {
+            activeCamera = 1;
+            std::cout << "3rd person." << std::endl;
+            f2Pressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE) {
+        static bool f2Pressed = false;
+        f2Pressed = false;
+    }
 
+    if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
+        static bool f3Pressed = false;
+        if (!f3Pressed) {
+            activeCamera = 2;
+            std::cout << "1st person." << std::endl;
+            f3Pressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_RELEASE) {
+        static bool f3Pressed = false;
+        f3Pressed = false;
+    }
 }
 
 // glfw: Actualizamos el puerto de vista si hay cambios del tamaño
@@ -1056,7 +1125,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     // SI ESTAMOS EN MODO NORMAL
     else
     {
-        camera.ProcessMouseMovement(xoffset, yoffset);
+        camera_float.ProcessMouseMovement(xoffset, yoffset);
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
@@ -1079,7 +1148,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     // SI ESTAMOS EN MODO NORMAL
     else
     {
-        camera.ProcessMouseScroll((float)yoffset);
+        camera_float.ProcessMouseScroll((float)yoffset);
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
