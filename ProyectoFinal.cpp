@@ -195,24 +195,39 @@ bool Start() {
 	dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
 	// --- Carga de modelos modulares ---
-	museo = new Model("models/IllumModels/proyectofinal/entorno.fbx");
-
-	// Cargamos los modelos interactivos
-	Model* estatuaModel = new Model("models/IllumModels/estatua.fbx");
-	Model* piramideModel = new Model("models/IllumModels/proyectofinal/piramides.fbx");
-	Model* estanteModel = new Model("models/IllumModels/proyectofinal/Estante1.fbx");
-
+	museo = new Model("models/IllumModels/proyectofinal/Entorno.fbx");
+	Model* Xiucoatl = new Model("models/IllumModels/estatua.fbx");
+	Model* piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
+	Model* PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
+	Model* Coatlicue = new Model("models/IllumModels/proyectofinal/Coatlicue.fbx");
+	Model* PlatoAntiguo = new Model("models/IllumModels/proyectofinal/PlatoAntiguo.fbx");
+	Model* Craneo = new Model("models/IllumModels/proyectofinal/Craneo.fbx");
+	Model* Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
+	Model* Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
+	Model* Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
 	character01 = new AnimatedModel("models/character.fbx");
 
 	// Definimos las posiciones de los objetos (las que tenías en Update())
 	glm::vec3 estatuaPos = glm::vec3(0.0f, 0.0f, 0.0f); // Origen
 	glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
-	glm::vec3 estantePos = glm::vec3(29.3f, 0.0f, -21.08f);
+	glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
+	glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
+	glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
+	glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
+	glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
+	glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
+	glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 	// Creamos y añadimos los objetos interactivos a la lista global
-	g_interactiveObjects.emplace_back(estatuaModel, estatuaPos, 6.0f, "Estatua"); // Radio de 3 unidades
-	g_interactiveObjects.emplace_back(piramideModel, piramidePos, 4.0f, "Piramides"); // Radio de 4
-	g_interactiveObjects.emplace_back(estanteModel, estantePos, 3.0f, "Estante"); // Radio de 3
+	g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua"); // Radio de 3 unidades
+	g_interactiveObjects.emplace_back(piramide, piramidePos, 4.0f, "Piramides"); // Radio de 4
+	g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 3.0f, "PiedraSol"); // Radio de 3
+	g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.0f, "Coatlicue"); // Radio de 3
+	g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 3.0f, "PlatoAntiguo"); // Radio de 3
+	g_interactiveObjects.emplace_back(Craneo, CraneoPos, 3.0f, "Craneo");
+	g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 3.0f, "Incenciario");
+	g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 3.0f, "Xochipilli");
+	g_interactiveObjects.emplace_back(Bracero, BraceroPos, 3.0f, "Bracero");
 	// --- Fin de Carga de modelos ---
 
 
