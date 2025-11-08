@@ -148,11 +148,11 @@ glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
-glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
-glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
-glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
+glm::vec3 CoatlicuePos = glm::vec3(-48.55f, 0.0f, -95.33f);
+glm::vec3 PlatoAntiguoPos = glm::vec3(-41.28f, -0.7f, -71.74f);
+glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
-glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
+glm::vec3 XochipilliPos = glm::vec3(50.063f, 0.02f, -93.076f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 
