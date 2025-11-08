@@ -110,8 +110,8 @@ glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0
 float       thirdpersonOffset = 1.5f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
-float walkSpeed = 0.05f;
-float runSpeed = 0.2f;
+float walkSpeed = 0.1f;
+float runSpeed = 0.3f;
 float       scaleV = walkSpeed;
 
 float characterHeight = 2.0f;      // Altura del personaje
@@ -148,11 +148,11 @@ glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
-glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
-glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
-glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
+glm::vec3 CoatlicuePos = glm::vec3(-47.55f, 0.0f, -95.0f);
+glm::vec3 PlatoAntiguoPos = glm::vec3(-41.6f, -0.7f, -71.74f);
+glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
-glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
+glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 
@@ -887,34 +887,34 @@ void InitializeCollidableObjects() {
                                        glm::vec3(13.0f, 10.0f, 17.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
-    //g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
-    //                              AABB(glm::vec3(-4.0f, 0.0f, -2.0f),
-    //                                   glm::vec3(4.0f, 15.0f, 3.5f)),
-    //                              glm::vec3(1.0f), 0.0f });
-    //
+    g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
+                                  AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
+                                       glm::vec3(2.8f, 15.0f, 3.5f)),
+                                  glm::vec3(1.0f), 0.0f });
+    
     g_collidableObjects.push_back({ PlatoAntiguo, PlatoAntiguoPos,
-                                  AABB(glm::vec3(-2.0f, 0.0f, -1.0f),
-                                       glm::vec3(2.0f, 5.0f, 1.0f)),
+                                  AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
+                                       glm::vec3(1.8f, 5.0f, 2.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Craneo, CraneoPos,
-                                  AABB(glm::vec3(-2.0f, 0.0f, -1.0f),
-                                       glm::vec3(2.0f, 5.0f, 1.0f)),
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 5.0f, 1.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Incenciario, IncenciarioPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 2.0f, 1.0f)),
+                                  AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
+                                       glm::vec3(3.0f, 8.0f, 3.3f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Xochipilli, XochipilliPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 8.0f, 1.0f)),
+                                  AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
+                                       glm::vec3(1.5f, 8.0f, 2.5f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Bracero, BraceroPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 8.0f, 1.0f)),
+                                  AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
+                                       glm::vec3(2.0f, 8.0f, 2.0f)),
                                   glm::vec3(1.0f), 0.0f });
 }
 
