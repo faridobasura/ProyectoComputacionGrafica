@@ -432,23 +432,19 @@ bool Start() {
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
 
-    // Objeto: Xiucoatl (Estatua) - Cámara frontal estándar
     g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua",
         glm::vec3(0.0f, 5.0f, 1.0f),
         glm::vec3(0.0f, 5.0f, 11.0f));
 
-    // Objeto: Pirámide - Cámara un poco más alta y lejana
     g_interactiveObjects.emplace_back(piramide, piramidePos, 4.0f, "Piramides",
         glm::vec3(0.0f, 2.0f, 0.0f),  // Mirar 1m arriba
         glm::vec3(0.0f, 3.0f, 10.0f)); // Pararse 2m arriba, 5m enfrente
 
-    // Objeto: PiedraDelSol - Cámara frontal
-    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 15.0f, "PiedraSol",
+    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 18.0f, "PiedraSol",
         glm::vec3(0.0f, 7.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(0.0f, 7.0f, 15.0f)); // Pararse 3m enfrente
 
-    // Objeto: Coatlicue - Vista lateral izquierda
-    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.0f, "Coatlicue",
+    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.8f, "Coatlicue",
         glm::vec3(-5.0f, 6.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(16.0f, 6.0f, 0.0f)); // Pararse 4m a la IZQUIERDA (X negativo)
 
@@ -457,22 +453,18 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 0.0f),  // Mirar justo encima del plato
         glm::vec3(0.0f, 6.0f, -7.0f)); // Pararse 3m ARRIBA, un poco enfrente
 
-    // Objeto: Craneo - Vista frontal estándar
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 3.0f, "Craneo",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f));
 
-    // Objeto: Incenciario - Vista lateral derecha
-    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 3.0f, "Incenciario",
+    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 4.0f, "Incenciario",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(3.0f, 6.0f, 8.0f)); // Pararse 3m a la DERECHA (X positivo)
+        glm::vec3(3.0f, 6.0f, 8.0f));
 
-    // Objeto: Xochipilli - Vista frontal estándar
     g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 3.0f, "Xochipilli",
         glm::vec3(5.0f, 5.0f, 0.0f),
         glm::vec3(-15.0f, 6.0f, 0.0f));
 
-    // Objeto: Bracero - Vista frontal estándar
     g_interactiveObjects.emplace_back(Bracero, BraceroPos, 3.0f, "Bracero",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f));
