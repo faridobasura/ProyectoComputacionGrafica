@@ -459,8 +459,8 @@ bool Start() {
 
     // Objeto: Craneo - Vista frontal estándar
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 3.0f, "Craneo",
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 3.0f));
+        glm::vec3(0.0f, 5.0f, 0.0f),
+        glm::vec3(0.0f, 6.0f, 3.0f));
 
     // Objeto: Incenciario - Vista lateral derecha
     g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 3.0f, "Incenciario",
