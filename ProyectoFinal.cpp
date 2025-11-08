@@ -497,23 +497,30 @@ bool Start() {
     Light light01;
     light01.Position = glm::vec3(11.5f, 20.3f, -1.7f);
     light01.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
+    light01.Power = glm::vec4(50.0f);  
+
     gLights.push_back(light01);
 
     //Entrada_izq
     Light light02;
     light02.Position = glm::vec3(-10.0f, 20.3f, -1.7f);
     light02.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
+    light02.Power = glm::vec4(50.0f); 
     gLights.push_back(light02);
 
     Light light03;
     light03.Position = glm::vec3(22.3f, 22.0f, -88.7f);
     light03.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
+    light03.Power = glm::vec4(60.0f); // más fuerte
     gLights.push_back(light03);
 
     Light light04;
     light04.Position = glm::vec3(-16.7f, 22.0f, -88.7f);
     light04.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
+    light04.Power = glm::vec4(60.0f); 
+
     gLights.push_back(light04);
+
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
 
