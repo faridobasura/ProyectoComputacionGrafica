@@ -110,8 +110,8 @@ glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0
 float       thirdpersonOffset = 1.5f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
-float walkSpeed = 0.05f;
-float runSpeed = 0.2f;
+float walkSpeed = 0.1f;
+float runSpeed = 0.3f;
 float       scaleV = walkSpeed;
 
 float characterHeight = 2.0f;      // Altura del personaje
@@ -148,11 +148,11 @@ glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
-glm::vec3 CoatlicuePos = glm::vec3(-48.55f, 0.0f, -95.33f);
-glm::vec3 PlatoAntiguoPos = glm::vec3(-41.28f, -0.7f, -71.74f);
+glm::vec3 CoatlicuePos = glm::vec3(-47.55f, 0.0f, -95.0f);
+glm::vec3 PlatoAntiguoPos = glm::vec3(-41.6f, -0.7f, -71.74f);
 glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
-glm::vec3 XochipilliPos = glm::vec3(50.063f, 0.02f, -93.076f);
+glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 
@@ -432,23 +432,19 @@ bool Start() {
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
 
-    // Objeto: Xiucoatl (Estatua) - Cámara frontal estándar
     g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua",
         glm::vec3(0.0f, 5.0f, 1.0f),
         glm::vec3(0.0f, 5.0f, 11.0f));
 
-    // Objeto: Pirámide - Cámara un poco más alta y lejana
     g_interactiveObjects.emplace_back(piramide, piramidePos, 4.0f, "Piramides",
         glm::vec3(0.0f, 2.0f, 0.0f),  // Mirar 1m arriba
         glm::vec3(0.0f, 3.0f, 10.0f)); // Pararse 2m arriba, 5m enfrente
 
-    // Objeto: PiedraDelSol - Cámara frontal
-    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 15.0f, "PiedraSol",
+    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 18.0f, "PiedraSol",
         glm::vec3(0.0f, 7.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(0.0f, 7.0f, 15.0f)); // Pararse 3m enfrente
 
-    // Objeto: Coatlicue - Vista lateral izquierda
-    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.0f, "Coatlicue",
+    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.8f, "Coatlicue",
         glm::vec3(-5.0f, 6.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(16.0f, 6.0f, 0.0f)); // Pararse 4m a la IZQUIERDA (X negativo)
 
@@ -457,22 +453,26 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 0.0f),  // Mirar justo encima del plato
         glm::vec3(0.0f, 6.0f, -7.0f)); // Pararse 3m ARRIBA, un poco enfrente
 
-    // Objeto: Craneo - Vista frontal estándar
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 3.0f, "Craneo",
+<<<<<<< HEAD
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f));
 
     // Objeto: Incenciario - Vista lateral derecha
     g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 3.0f, "Incenciario",
+=======
+>>>>>>> origin/ColisionesConObjetos
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(3.0f, 6.0f, 8.0f)); // Pararse 3m a la DERECHA (X positivo)
+        glm::vec3(0.0f, 6.0f, 3.0f));
 
-    // Objeto: Xochipilli - Vista frontal estándar
+    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 4.0f, "Incenciario",
+        glm::vec3(0.0f, 5.0f, 0.0f),
+        glm::vec3(3.0f, 6.0f, 8.0f));
+
     g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 3.0f, "Xochipilli",
         glm::vec3(5.0f, 5.0f, 0.0f),
         glm::vec3(-15.0f, 6.0f, 0.0f));
 
-    // Objeto: Bracero - Vista frontal estándar
     g_interactiveObjects.emplace_back(Bracero, BraceroPos, 3.0f, "Bracero",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f));
@@ -876,50 +876,48 @@ void InitializeCollidableObjects() {
                                   AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
                                         glm::vec3(4.5f, 8.0f, 4.5f)),  // max (x, y, z),    // ← Más pequeño
                                         glm::vec3(1.0f), 0.0f });
-    /*
+    
     g_collidableObjects.push_back({ piramide, piramidePos,
-                                  AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
-                                       glm::vec3(3.0f, 4.0f, 3.0f)),
+                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
+                                       glm::vec3(4.0f, 4.0f, 4.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
-    // Agregar más objetos aquí...
     g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
-                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
-                                       glm::vec3(4.0f, 2.0f, 4.0f)),
+                                  AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
+                                       glm::vec3(13.0f, 10.0f, 17.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
-                                  AABB(glm::vec3(-1.5f, 0.0f, -1.5f),
-                                       glm::vec3(1.5f, 3.0f, 1.5f)),
+                                  AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
+                                       glm::vec3(2.8f, 15.0f, 3.5f)),
                                   glm::vec3(1.0f), 0.0f });
-
+    
     g_collidableObjects.push_back({ PlatoAntiguo, PlatoAntiguoPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 0.5f, 1.0f)),
+                                  AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
+                                       glm::vec3(1.8f, 5.0f, 2.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Craneo, CraneoPos,
-                                  AABB(glm::vec3(-0.5f, 0.0f, -0.5f),
-                                       glm::vec3(0.5f, 0.5f, 0.5f)),
+                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                       glm::vec3(1.0f, 5.0f, 1.0f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Incenciario, IncenciarioPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 2.0f, 1.0f)),
+                                  AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
+                                       glm::vec3(3.0f, 8.0f, 3.3f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Xochipilli, XochipilliPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 2.0f, 1.0f)),
+                                  AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
+                                       glm::vec3(1.5f, 8.0f, 2.5f)),
                                   glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Bracero, BraceroPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 1.5f, 1.0f)),
-                                  glm::vec3(1.0f), 0.0f });*/
+                                  AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
+                                       glm::vec3(2.0f, 8.0f, 2.0f)),
+                                  glm::vec3(1.0f), 0.0f });
 }
 
-// Implementaciones (después de las otras funciones, antes de processInput)
 
 void processInput(GLFWwindow* window)
 {
