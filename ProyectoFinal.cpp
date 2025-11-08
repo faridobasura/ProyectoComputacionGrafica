@@ -3,6 +3,7 @@
 */
 
 #include <iostream>
+
 #include <stdlib.h>
 #include <sstream> // Necesario para SetLightUniform...
 #include <vector>  // Para usar std::vector
@@ -310,21 +311,29 @@ void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projecti
     model = glm::translate(model, center);
     model = glm::scale(model, size);
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     debugShader->setMat4("model", model);
     debugShader->setMat4("view", view);
     debugShader->setMat4("projection", projection);
     debugShader->setVec3("color", color);
 
+    // Transparencia (por ejemplo, 50%)
+    debugShader->setFloat("alpha", 0.5f);
+    debugShader->setBool("useAlpha", true);
+
     glBindVertexArray(debugVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
+
 }
 void DrawLightDebug(glm::mat4 projection, glm::mat4 view) {
     if (!showCollisionBoxes) return;
 
     for (const auto& light : gLights) {
         AABB lightVolume;
-        float lightSize = 0.2f; // Tamaño visual de la luz
+        float lightSize = 0.5f; // Tamaño visual de la luz
         lightVolume.min = light.Position - glm::vec3(lightSize);
         lightVolume.max = light.Position + glm::vec3(lightSize);
 
@@ -370,7 +379,7 @@ bool Start() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Creación de la ventana con GLFW
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Animation", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Proyecto Final", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -467,16 +476,15 @@ bool Start() {
         glm::vec3(0.0f, 6.0f, -7.0f));
     // --- Fin de Carga de modelos ---
 
-
     // Cubemap
     vector<std::string> faces
     {
-        "textures/cubemap/01/posx.png",
-        "textures/cubemap/01/negx.png",
-        "textures/cubemap/01/posy.png",
-        "textures/cubemap/01/negy.png",
-        "textures/cubemap/01/posz.png",
-        "textures/cubemap/01/negz.png"
+        "textures/skybox_night/posx.png",
+        "textures/skybox_night/negx.png",
+        "textures/skybox_night/posy.png",
+        "textures/skybox_night/negy.png",
+        "textures/skybox_night/posz.png",
+        "textures/skybox_night/negz.png"
     };
     mainCubeMap = new CubeMap();
     mainCubeMap->loadCubemap(faces);
@@ -485,25 +493,26 @@ bool Start() {
 
     // Lights configuration
 
+    //Entrada_derecha
     Light light01;
-    light01.Position = glm::vec3(5.0f, 10.0f, 5.0f);
-    light01.Color = glm::vec4(0.3f, 0.0f, 0.0f, 1.0f);
+    light01.Position = glm::vec3(11.5f, 20.3f, -1.7f);
+    light01.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
     gLights.push_back(light01);
 
-
+    //Entrada_izq
     Light light02;
-    light02.Position = glm::vec3(-5.0f, 10.0f, 5.0f);
-    light02.Color = glm::vec4(0.3f, 0.6f, 0.0f, 0.6f);
+    light02.Position = glm::vec3(-10.0f, 20.3f, -1.7f);
+    light02.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
     gLights.push_back(light02);
 
     Light light03;
-    light03.Position = glm::vec3(5.0f, 10.0f, -5.0f);
-    light03.Color = glm::vec4(0.3f, 0.0f, 0.6f, 0.6f);
+    light03.Position = glm::vec3(22.3f, 22.0f, -88.7f);
+    light03.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
     gLights.push_back(light03);
 
     Light light04;
-    light04.Position = glm::vec3(-5.0f, 10.0f, -5.0f);
-    light04.Color = glm::vec4(0.3f, 0.6f, 0.0f, 0.6f);
+    light04.Position = glm::vec3(-16.7f, 22.0f, -88.7f);
+    light04.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
     gLights.push_back(light04);
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
@@ -562,7 +571,7 @@ bool Update() {
         bool foundNearby = false;
         for (auto& obj : g_interactiveObjects) {
 
-            float distance = glm::distance(position_origin, obj.position); 
+            float distance = glm::distance(character_position, obj.position); 
 
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
@@ -613,7 +622,7 @@ bool Update() {
 
         // --- ¡CAMBIO AQUÍ! ---
         // 4. Usamos g_inspectZoom (controlado por el scroll) para la proyección
-        projection = glm::perspective(glm::radians(g_inspectZoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+        projection = glm::perspective(glm::radians(g_inspectZoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
         // --- FIN DE CAMBIO ---
     }
     // SI ESTAMOS EN MODO NORMAL (explorando)
@@ -621,17 +630,17 @@ bool Update() {
     {
         if (activeCamera == 0) {
             // Cámara flotante
-            projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
             view = camera_float.GetViewMatrix();
         }
         else if (activeCamera == 1) {
             // Cámara en tercera persona
-            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
             view = camera3rd.GetViewMatrix();
         }
         else if (activeCamera == 2) {
             // Cámara flotante
-            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
             view = camera1st.GetViewMatrix();
         }
     }
@@ -728,6 +737,7 @@ bool Update() {
                 triggerBox.max = obj.position + glm::vec3(obj.triggerRadius, 2.0f, obj.triggerRadius);
                 DrawBoundingBox(triggerBox, glm::vec3(0.0f, 0.0f, 1.0f), projection, view);
                 DrawLightDebug(projection, view);
+
             }
 
 			
@@ -1070,7 +1080,7 @@ void processInput(GLFWwindow* window)
             }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-            rotateCharacter += 0.2f;
+            rotateCharacter += 0.8f;
             if (character_run) {
                 rotateCharacter += 2.0f;
             }
@@ -1078,7 +1088,7 @@ void processInput(GLFWwindow* window)
         }
 
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-            rotateCharacter -= 0.2f;
+            rotateCharacter -= 0.8f;
             if (character_run) {
                 rotateCharacter -= 2.0f;
             }
