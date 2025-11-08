@@ -53,19 +53,16 @@ struct CollidableObject {
     float rotationY;
 };
 
-// --- ESTRUCTURA DE OBJETO INTERACTIVO (MODIFICADA) ---
 struct InteractiveObject {
     Model* model;            // Puntero al modelo cargado
     glm::vec3   position;         // Posición en el mundo
     float       triggerRadius;    // Radio de cercanía
     std::string name;             // Nombre para depuración
 
-    // Variables de estado para la inspección
     float       inspectRotationY; // Rotación en Y (ahora automática)
     float       inspectRotationX; // Rotación en X (ya no se usa, pero se queda para reset)
     bool        isAutoRotatingY;  // Bandera para rotación automática
 
-    // --- ¡NUEVO! Configuración de cámara individual ---
     glm::vec3   inspectTargetOffset; // Punto de mira (relativo a la posición del objeto)
     glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
 
@@ -76,7 +73,6 @@ struct InteractiveObject {
         inspectTargetOffset(targetOffset), inspectCamPos(camPos) 
     { } 
 };
-// --- FIN DE ESTRUCTURA ---
 
 // Functions
 bool Start();
@@ -85,7 +81,11 @@ bool CheckCollision(const AABB& a, const AABB& b);
 AABB CalculateWorldAABB(const CollidableObject& obj);
 AABB GetCharacterBoundingBox();
 bool CheckCharacterCollision();
+bool CheckCollisionAtPosition(const glm::vec3& position);
 void InitializeCollidableObjects();
+void UpdateFirstPersonCamera();
+void UpdateThirdPersonCamera();
+void UpdateCameras(); 
 
 // Definición de callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -105,7 +105,7 @@ glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 20.0f);
 glm::vec3 forwardView(0.0f, 0.0f, -1.0f);
 glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f))); //camarad e hombro
 
-float       thirdpersonOffset = 0.8f;
+float       thirdpersonOffset = 1.5f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
 float walkSpeed = 0.05f;
@@ -113,13 +113,13 @@ float runSpeed = 0.2f;
 float       scaleV = walkSpeed;
 
 float characterHeight = 2.0f;      // Altura del personaje
-float characterRadius = 0.2f;      // Radio para colisión cilíndrica
+float characterRadius = 0.5f;      // Radio para colisión cilíndrica
 float collisionOffset = 1.0f;      // Margen de seguridad
 
 // Definición de cámara (posición en XYZ)
 Camera camera_float(glm::vec3(0.0f, 2.0f, 10.0f));
-Camera camera1st = character_position + glm::vec3(0.0f, 1.8f, 0.0f);
-Camera camera3rd = character_position + glm::vec3(0.0f, 0.8f, -0.05f);
+Camera camera1st = character_position + glm::vec3(0.0f, 1.0f, 0.0f);
+Camera camera3rd = character_position + glm::vec3(0.0f, 1.3f, -0.05f);
 
 // Controladores para el movimiento del mouse
 float lastX = SCR_WIDTH / 2.0f;
@@ -137,18 +137,13 @@ std::vector<CollidableObject> g_collidableObjects;
 AABB characterBoundingBox;
 
 // Variables para debug de colisiones
-Shader* debugShader;
 unsigned int debugVAO, debugVBO;
 bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
 
-//Origen
+glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 
-glm::vec3 position(0.0f, 0.0f, 0.0f);
-
-
-// Posiciones de los objetos
-glm::vec3 estatuaPos = glm::vec3(0.0f, 0.0f, 0.0f); // Origen
+glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
 glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
@@ -163,6 +158,7 @@ glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 Shader* mLightsShader;
 Shader* proceduralShader;
 Shader* wavesShader;
+Shader* debugShader;
 
 Shader* cubemapShader;
 Shader* dynamicShader;
@@ -199,7 +195,7 @@ float wavesTime = 0.0f;
 ISoundEngine* SoundEngine = createIrrKlangDevice();
 
 // selección de cámara
-bool activeCamera = 1;
+int activeCamera = 1;
 
 
 // --- VARIABLES GLOBALES DE INTERACCIÓN ---
@@ -234,37 +230,69 @@ int main()
 
 void CreateDebugCube() {
     float vertices[] = {
-        // Líneas del cubo (12 líneas = 24 vértices)
         // Cara frontal
-        -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
 
-         // Cara trasera
-         -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,
-         -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
-         -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f,
-          0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f,
+        // Cara trasera
+        -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
 
-          // Conectores
-          -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f,
-          -0.5f,  0.5f, -0.5f, -0.5f,  0.5f,  0.5f,
-           0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,
-           0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f
+        // Cara izquierda
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        // Cara derecha
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+
+         // Cara inferior
+         -0.5f, -0.5f, -0.5f,
+          0.5f, -0.5f, -0.5f,
+          0.5f, -0.5f,  0.5f,
+          0.5f, -0.5f,  0.5f,
+         -0.5f, -0.5f,  0.5f,
+         -0.5f, -0.5f, -0.5f,
+
+         // Cara superior
+         -0.5f,  0.5f, -0.5f,
+         -0.5f,  0.5f,  0.5f,
+          0.5f,  0.5f,  0.5f,
+          0.5f,  0.5f,  0.5f,
+          0.5f,  0.5f, -0.5f,
+         -0.5f,  0.5f, -0.5f
     };
 
-    glGenVertexArrays(1, &debugVAO);
-    glGenBuffers(1, &debugVBO);
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
 
-    glBindVertexArray(debugVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, debugVBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
+
+    debugVAO = VAO;
 }
 
 void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projection, glm::mat4 view) {
@@ -287,10 +315,36 @@ void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projecti
     debugShader->setVec3("color", color);
 
     glBindVertexArray(debugVAO);
-    glDrawArrays(GL_LINES, 0, 24); // 12 líneas * 2 vértices = 24 vértices
+    glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
 
+void UpdateFirstPersonCamera() {
+    camera1st.Position = character_position + glm::vec3(0.0f, 1.8f, 0.0f);
+    camera1st.Front = forwardView;
+    camera1st.Right = rightView;
+    camera1st.Up = glm::vec3(0.0f, 1.0f, 0.0f);
+}
+
+void UpdateThirdPersonCamera() {
+    camera3rd.Front = forwardView;
+    camera3rd.Position = character_position
+        - (thirdpersonOffset * forwardView)
+        + (0.5f * rightView)
+        + glm::vec3(0.0f, 1.3f, 0.0f);
+}
+
+void UpdateCameras() {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec4 viewVector = model * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+
+    forwardView = glm::normalize(glm::vec3(viewVector));
+    rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+    UpdateFirstPersonCamera();
+    UpdateThirdPersonCamera();
+}
 
 bool Start() {
     // Inicialización de GLFW
@@ -330,6 +384,7 @@ bool Start() {
     cubemapShader = new Shader("shaders/10_vertex_cubemap.vs", "shaders/10_fragment_cubemap.fs");
     dynamicShader = new Shader("shaders/10_vertex_skinning-IT.vs", "shaders/10_fragment_skinning-IT.fs");
     debugShader = new Shader("shaders/shader_debug.vs", "shaders/shader_debug.fs");
+
     CreateDebugCube();
 
     // Máximo número de huesos: 100
@@ -412,16 +467,7 @@ bool Start() {
     mainCubeMap = new CubeMap();
     mainCubeMap->loadCubemap(faces);
 
-    camera3rd.Position = character_position;
-    camera3rd.Position.y += 0.9f;
-    camera3rd.Position -= thirdpersonOffset * forwardView;
-    camera3rd.Position += 0.5f * rightView;
-    camera3rd.Front = forwardView;
-
-    camera1st.Position = character_position;
-    camera1st.Position += 0.8f;
-    //camera1st.Position -= forwardView;
-    camera1st.Front = forwardView;
+    UpdateCameras();
 
     // Lights configuration
     Light light01;
@@ -555,25 +601,21 @@ bool Update() {
     // SI ESTAMOS EN MODO NORMAL (explorando)
     else
     {
-        if (activeCamera) {
-            if (activeCamera == 0) {
-                // Cámara flotante
-                projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-                view = camera_float.GetViewMatrix();
-            }
-            else if (activeCamera == 1) {
-                // Cámara en tercera persona
-                projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-                view = camera3rd.GetViewMatrix();
-            }
-            else if (activeCamera == 2) {
-                // Cámara flotante
-                projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-                view = camera1st.GetViewMatrix();
-            }
+        if (activeCamera == 0) {
+            // Cámara flotante
+            projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            view = camera_float.GetViewMatrix();
         }
-        
-
+        else if (activeCamera == 1) {
+            // Cámara en tercera persona
+            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            view = camera3rd.GetViewMatrix();
+        }
+        else if (activeCamera == 2) {
+            // Cámara flotante
+            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
+            view = camera1st.GetViewMatrix();
+        }
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
@@ -581,12 +623,9 @@ bool Update() {
     {
         mainCubeMap->drawCubeMap(*cubemapShader, projection, view);
     }
-
     {
         mLightsShader->use();
         if (mLightsShader->ID != 0) {
-
-
 
             // Activamos para objetos transparentes
             glEnable(GL_BLEND);
@@ -713,9 +752,21 @@ bool Update() {
 
 
 bool CheckCollision(const AABB& a, const AABB& b) {
-    return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
-        (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
-        (a.min.z <= b.max.z && a.max.z >= b.min.z);
+    bool collisionX = (a.min.x <= b.max.x && a.max.x >= b.min.x);
+    bool collisionY = (a.min.y <= b.max.y && a.max.y >= b.min.y);
+    bool collisionZ = (a.min.z <= b.max.z && a.max.z >= b.min.z);
+    bool collision = collisionX && collisionY && collisionZ;
+
+    if (collision) {
+        std::cout << "=== COLISIÓN DETECTADA ===" << std::endl;
+        std::cout << "Eje X: " << (collisionX ? "SÍ" : "NO") << std::endl;
+        std::cout << "Eje Y: " << (collisionY ? "SÍ" : "NO") << std::endl;
+        std::cout << "Eje Z: " << (collisionZ ? "SÍ" : "NO") << std::endl;
+        std::cout << "Personaje - Min: (" << a.min.x << ", " << a.min.z << ") Max: (" << a.max.x << ", " << a.max.z << ")" << std::endl;
+        std::cout << "Objeto    - Min: (" << b.min.x << ", " << b.min.z << ") Max: (" << b.max.x << ", " << b.max.z << ")" << std::endl;
+    }
+
+    return collision;
 }
 
 AABB CalculateWorldAABB(const CollidableObject& obj) {
@@ -733,14 +784,29 @@ AABB GetCharacterBoundingBox() {
 }
 
 bool CheckCharacterCollision() {
+
     AABB charAABB = GetCharacterBoundingBox();
 
     for (int i = 0; i < g_collidableObjects.size(); i++) {
         AABB objAABB = CalculateWorldAABB(g_collidableObjects[i]);
         bool collision = CheckCollision(charAABB, objAABB);
 
+        if(collision) {
+            return true;
+        }
+
     }
     return false;
+}
+bool CheckCollisionAtPosition(const glm::vec3& position) {
+    glm::vec3 oldPosition = character_position;
+
+    character_position = position;
+    bool collision = CheckCharacterCollision();
+
+    character_position = oldPosition;
+
+    return collision;
 }
 
 void UpdateInteractionsWithCollision() {
@@ -768,8 +834,8 @@ void InitializeCollidableObjects() {
 
     // Estatuas y objetos interactivos
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
-                                  AABB(glm::vec3(-10.0f, 0.0f, -10.0f),   // min (x, y, z)
-                                        glm::vec3(10.0f, 10.0f, 10.0f)),  // max (x, y, z),    // ← Más pequeño
+                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),   // min (x, y, z)
+                                        glm::vec3(4.0f, 10.0f, 4.0f)),  // max (x, y, z),    // ← Más pequeño
                                         glm::vec3(1.0f), 0.0f });
     /*
     g_collidableObjects.push_back({ piramide, piramidePos,
@@ -813,22 +879,37 @@ void InitializeCollidableObjects() {
                                        glm::vec3(1.0f, 1.5f, 1.0f)),
                                   glm::vec3(1.0f), 0.0f });*/
 }
-// Procesamos entradas del teclado
+
+// Implementaciones (después de las otras funciones, antes de processInput)
+
 void processInput(GLFWwindow* window)
 {
+    static bool f1Pressed = false, f2Pressed = false, f3Pressed = false;
+    static bool keyPressed = false;
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // --- Controles de cámara y debug ---
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera_float.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera_float.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera_float.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera_float.ProcessKeyboard(RIGHT, deltaTime);
-
+    if (character_run == true) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(FORWARD, deltaTime * 4.0f);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(BACKWARD, deltaTime * 4.0f);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(LEFT, deltaTime * 4.0f);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
+    }
+    else {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(RIGHT, deltaTime);
+    }
 
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -838,7 +919,6 @@ void processInput(GLFWwindow* window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        static bool keyPressed = false;
         if (!keyPressed) {
             showCollisionBoxes = !showCollisionBoxes;
             if (showCollisionBoxes && (!debugShader || debugShader->ID == 0)) {
@@ -852,39 +932,25 @@ void processInput(GLFWwindow* window)
         }
     }
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
-        static bool keyPressed = false;
         keyPressed = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-        static bool shiftPressed = false;
-        if (!shiftPressed) {
-            character_run = !character_run;  // ← TOGGLE (alternar)
-
-            if (character_run) {
-                scaleV = runSpeed;
-                std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl;
-            }
-            else {
-                scaleV = walkSpeed;
-                std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
-            }
-
-            shiftPressed = true;
+        if (!character_run) {
+            character_run = true;
+            scaleV = runSpeed;
+            std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
-        static bool shiftPressed = false;
-        shiftPressed = false;
-        character_run = false;
+        if (character_run) {
+            character_run = false;
+            scaleV = walkSpeed;
+            std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
+        }
     }
 
-    // --- Fin controles ---
-
-
-    // --- LÓGICA DE TECLA F (para pulsación única) ---
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-        // Solo si NO la teníamos presionada desde el frame anterior
         if (!g_f_keyPressed) {
             
             // CASO 1: Empezar a interactuar
@@ -894,9 +960,7 @@ void processInput(GLFWwindow* window)
                 std::cout << "                                                      \r"; 
                 std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona Y para rotar/detener.\n";
 
-                // --- ¡CAMBIO AQUÍ! ---
-                g_inspectZoom = 45.0f; // Reseteamos el zoom al valor por defecto (45 grados)
-                // --- FIN DE CAMBIO ---
+                g_inspectZoom = 45.0f; 
             }
             // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
@@ -915,13 +979,9 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
         g_f_keyPressed = false; // Reseteamos la bandera cuando se suelta
     }
-    // --- FIN DE LÓGICA F ---
 
-    // --- LÓGICA DE TECLA Y (para auto-rotación) ---
-    // Solo funciona si ya estamos en modo inspección
     if (g_interactingObject != nullptr && glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         if (!g_y_keyPressed) {
-            // Cambia (toggle) el estado de auto-rotación
             g_interactingObject->isAutoRotatingY = !g_interactingObject->isAutoRotatingY;
             std::cout << "                                                      \r"; 
             if (g_interactingObject->isAutoRotatingY) {
@@ -935,125 +995,68 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE) {
         g_y_keyPressed = false;
     }
-    // --- FIN DE LÓGICA Y ---
-
 
     // --- CONGELAR MOVIMIENTO MIENTRAS SE INTERACTÚA ---
     // Solo permitimos mover al personaje si NO estamos en modo interacción
     if (g_interactingObject == nullptr) {
-        // Character movement
+
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
             glm::vec3 newPosition = character_position + scaleV * forwardView;
-
-            // Guardar posición actual para revertir si hay colisión
             glm::vec3 oldPosition = character_position;
 
-            // Verificar colisión ANTES de mover
-            character_position = newPosition;  // ← SOLO ESTA LÍNEA MUEVE
-            if (CheckCharacterCollision()) {
-                character_position = oldPosition; // Revertir movimiento
-            }
-            else {
-                // Solo actualizar la cámara (NO volver a mover el personaje)
-                camera3rd.Front = forwardView;
+            if (!CheckCollisionAtPosition(newPosition)) {
                 camera3rd.ProcessKeyboard(FORWARD, deltaTime);
-                camera3rd.Position = character_position;
-                camera3rd.Position.y += 0.8f;
-                camera3rd.Position -= thirdpersonOffset * forwardView;
-                camera3rd.Position += 0.5f * rightView;
+                character_position = newPosition;
 
-                // También actualizar cámara primera persona
-                camera1st.Position = character_position;
-                camera1st.Position += 0.8f;
-                camera1st.Front = forwardView;
-            }
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-            glm::vec3 newPosition = character_position - scaleV * forwardView;  // ← RESTAR aquí
-
-            // Guardar posición actual para revertir si hay colisión
-            glm::vec3 oldPosition = character_position;
-
-            // Verificar colisión ANTES de mover
-            character_position = newPosition;  // ← SOLO ESTA LÍNEA MUEVE
-            if (CheckCharacterCollision()) {
-                character_position = oldPosition; // Revertir movimiento
+                UpdateCameras();
             }
             else {
-                // Solo actualizar la cámara (NO volver a mover el personaje)
-                camera3rd.Front = forwardView;
-                camera3rd.ProcessKeyboard(BACKWARD, deltaTime);
-                camera3rd.Position = character_position;
-                camera3rd.Position.y += 0.8f;
-                camera3rd.Position -= thirdpersonOffset * forwardView;
-                camera3rd.Position += 0.5f * rightView;
+                std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
 
-                // También actualizar cámara primera persona
-                camera1st.Position = character_position;
-                camera1st.Position += 0.8f;
-                camera1st.Front = forwardView;
+                character_position = oldPosition;
+                UpdateCameras();
+
+            }
+
+        }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            glm::vec3 newPosition = character_position - scaleV * forwardView;  
+            glm::vec3 oldPosition = character_position;
+
+            if (!CheckCollisionAtPosition(newPosition)) {
+                camera3rd.ProcessKeyboard(FORWARD, deltaTime);
+                character_position = newPosition;
+
+                UpdateCameras();
+            }
+            else {
+                std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
+
+                character_position = oldPosition;
+                UpdateCameras();
+
             }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
             rotateCharacter += 0.2f;
-
-            if (character_run == true) {
-                rotateCharacter += 1.5f;
+            if (character_run) {
+                rotateCharacter += 2.0f;
             }
-
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::vec4 viewVector = model * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-            forwardView = glm::vec3(viewVector);
-            forwardView = glm::normalize(forwardView);
-
-            rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f)));
-
-
-            camera3rd.Front = forwardView;
-            camera3rd.Position = character_position;
-            camera3rd.Position.y += 0.8f;
-            camera3rd.Position -= thirdpersonOffset * forwardView;
-            camera3rd.Position += 0.5f * rightView;
-
-            camera1st.Position = character_position;
-            camera1st.Position += 0.8f;
-            camera1st.Front -= forwardView;
+            UpdateCameras();
         }
+
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
             rotateCharacter -= 0.2f;
-
-            if (character_run == true) {
-                rotateCharacter -= 1.0f;
+            if (character_run) {
+                rotateCharacter -= 2.0f;
             }
 
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0f, 1.0f, 0.0f));
-            glm::vec4 viewVector = model * glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-            forwardView = glm::vec3(viewVector);
-            forwardView = glm::normalize(forwardView);
-
-            rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f)));
-
-
-            camera3rd.Front = forwardView;
-            camera3rd.Position = character_position;
-            camera3rd.Position.y += 0.8;
-            camera3rd.Position -= thirdpersonOffset * forwardView;
-            camera3rd.Position += 0.5f * rightView;
-
-            camera1st.Position = character_position;
-            camera1st.Position += 0.8f;
-            camera1st.Front -= forwardView;
-
-
+            UpdateCameras();
         }
-    } // Fin de if (g_interactingObject == nullptr)
+    } 
     // --- FIN DE CONGELAR MOVIMIENTO ---
 
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
-        static bool f1Pressed = false;
         if (!f1Pressed) {
             activeCamera = 0;
             std::cout << "float" << std::endl;
@@ -1061,12 +1064,10 @@ void processInput(GLFWwindow* window)
         }
     }
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_RELEASE) {
-        static bool f1Pressed = false;
         f1Pressed = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
-        static bool f2Pressed = false;
         if (!f2Pressed) {
             activeCamera = 1;
             std::cout << "3rd person." << std::endl;
@@ -1074,12 +1075,10 @@ void processInput(GLFWwindow* window)
         }
     }
     if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_RELEASE) {
-        static bool f2Pressed = false;
         f2Pressed = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
-        static bool f3Pressed = false;
         if (!f3Pressed) {
             activeCamera = 2;
             std::cout << "1st person." << std::endl;
@@ -1087,7 +1086,6 @@ void processInput(GLFWwindow* window)
         }
     }
     if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_RELEASE) {
-        static bool f3Pressed = false;
         f3Pressed = false;
     }
 }
