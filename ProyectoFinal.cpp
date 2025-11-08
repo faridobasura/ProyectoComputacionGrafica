@@ -864,8 +864,8 @@ void InitializeCollidableObjects() {
 
     // Estatuas y objetos interactivos
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
-                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),   // min (x, y, z)
-                                        glm::vec3(4.0f, 10.0f, 4.0f)),  // max (x, y, z),    // ← Más pequeño
+                                  AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
+                                        glm::vec3(4.5f, 8.0f, 4.5f)),  // max (x, y, z),    // ← Más pequeño
                                         glm::vec3(1.0f), 0.0f });
     /*
     g_collidableObjects.push_back({ piramide, piramidePos,

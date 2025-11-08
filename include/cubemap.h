@@ -98,8 +98,6 @@ public:
             unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
             if (data)
             {
-                std::cout << "Cargada cara " << i << ": " << faces[i]
-                    << " (" << width << "x" << height << ", canales: " << nrChannels << ")\n";
                 glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                     0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
                 stbi_image_free(data);
