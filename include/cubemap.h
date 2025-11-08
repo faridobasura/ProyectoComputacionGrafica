@@ -98,6 +98,8 @@ public:
             unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
             if (data)
             {
+                std::cout << "Cargada cara " << i << ": " << faces[i]
+                    << " (" << width << "x" << height << ", canales: " << nrChannels << ")\n";
                 glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                     0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
                 stbi_image_free(data);
@@ -116,21 +118,27 @@ public:
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     }
 
-    void drawCubeMap(Shader &shad, glm::mat4 &projection, glm::mat4 &view) {
-        
-        glUseProgram(0);
-        glDepthMask(GL_FALSE);
-        shad.use();
-        
+    void drawCubeMap(Shader& shad, glm::mat4& projection, glm::mat4& view)
+    {
+        glDepthFunc(GL_LEQUAL); 
+
+        shad.use(); 
         shad.setMat4("projection", projection);
-        shad.setMat4("view", view);
+
+        glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(view));
+        shad.setMat4("view", viewNoTranslation);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+        shad.setInt("skybox", 0); 
 
         glBindVertexArray(VAO);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-        glDrawArrays(GL_TRIANGLES, 0, 36*3);
-        glDepthMask(GL_TRUE);
-        glUseProgram(0);
+        glDrawArrays(GL_TRIANGLES, 0, 36); 
+        glBindVertexArray(0);
+
+        glDepthFunc(GL_LESS); 
     }
+
 
     unsigned int VAO;
     unsigned int textureID; // Cubemap texture id

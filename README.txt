@@ -2,3 +2,5 @@
 ((Se modificaron los fs shader sy el camera.h)
 2.- F1 - FLOAT; F2 - 3RD PEROSN; F3 -1ST PERSON, cambio de cámaras, 
 3.- C debug mode (colisiones)
+4.- S modifico include/cubemap.h
+5.- Se modificaron los shaders vertex_cubemap y fragment_cubemap
