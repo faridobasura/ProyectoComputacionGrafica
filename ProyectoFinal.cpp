@@ -179,6 +179,7 @@ Model* Xochipilli;
 Model* Bracero;
 
 // Modelos animados
+//AnimatedModel* character_ninia_normal;
 AnimatedModel* character01;
 
 // Cubemap
@@ -425,6 +426,7 @@ bool Start() {
     Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
     Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
+    //character_ninia_normal = new AnimatedModel("models/character_ninia.fbx");
     character01 = new AnimatedModel("models/character.fbx");
 
     // --- Configuración de cámaras de inspección ---
@@ -490,8 +492,6 @@ bool Start() {
     mainCubeMap->loadCubemap(faces);
 
     UpdateCameras();
-
-    // Lights configuration
 
     //Entrada_derecha
     Light light01;
@@ -744,8 +744,8 @@ bool Update() {
 
     // Objeto animado
     {
+        //character_ninia_normal->UpdateAnimation(deltaTime);
         character01->UpdateAnimation(deltaTime);
-
         // Activación del shader del personaje
         dynamicShader->use();
 
@@ -762,9 +762,11 @@ bool Update() {
 
         dynamicShader->setMat4("model", model);
 
+        //dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character_ninia_normal->gBones);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
 
         // Dibujamos el modelo
+        //character_ninia_normal->Draw(*dynamicShader);
         character01->Draw(*dynamicShader);
     }
 
