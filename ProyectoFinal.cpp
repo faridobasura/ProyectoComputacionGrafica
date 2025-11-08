@@ -66,6 +66,7 @@ struct InteractiveObject {
     glm::vec3   inspectTargetOffset; // Punto de mira (relativo a la posición del objeto)
     glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
 
+<<<<<<< HEAD
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
         glm::vec3 targetOffset, glm::vec3 camPos) :
         model(m), position(pos), triggerRadius(radius), name(n),
@@ -73,6 +74,14 @@ struct InteractiveObject {
         inspectTargetOffset(targetOffset), inspectCamPos(camPos)
     {
     }
+=======
+    InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n, 
+                      glm::vec3 targetOffset, glm::vec3 camPos) : 
+        model(m), position(pos), triggerRadius(radius), name(n),
+        inspectRotationY(0.0f), inspectRotationX(0.0f), isAutoRotatingY(false),
+        inspectTargetOffset(targetOffset), inspectCamPos(camPos) 
+    { } 
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
 };
 
 // Functions
@@ -86,7 +95,11 @@ bool CheckCollisionAtPosition(const glm::vec3& position);
 void InitializeCollidableObjects();
 void UpdateFirstPersonCamera();
 void UpdateThirdPersonCamera();
+<<<<<<< HEAD
 void UpdateCameras();
+=======
+void UpdateCameras(); 
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
 
 // Definición de callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -147,11 +160,19 @@ glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
+<<<<<<< HEAD
 glm::vec3 CoatlicuePos = glm::vec3(-48.55f, 0.0f, -95.33f);
 glm::vec3 PlatoAntiguoPos = glm::vec3(-41.92f, -0.7f, -71.74f);
 glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
 glm::vec3 XochipilliPos = glm::vec3(50.063f, 0.02f, -93.076f);
+=======
+glm::vec3 CoatlicuePos = glm::vec3(-48.47f, 0.0f, -97.635f);
+glm::vec3 PlatoAntiguoPos = glm::vec3(-42.28f, 0.0f, -73.26f);
+glm::vec3 CraneoPos = glm::vec3(-25.69f, 0.22f, -118.21f);
+glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
+glm::vec3 XochipilliPos = glm::vec3(51.11f, 0.06f, -93.76f);
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 
@@ -404,7 +425,11 @@ bool Start() {
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
     character01 = new AnimatedModel("models/character.fbx");
 
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
 
@@ -546,7 +571,11 @@ bool Update() {
     if (g_interactingObject == nullptr) {
         bool foundNearby = false;
         for (auto& obj : g_interactiveObjects) {
+<<<<<<< HEAD
             float distance = glm::distance(character_position, obj.position); // Distancia del personaje al objeto
+=======
+            float distance = glm::distance(position_origin, obj.position); // Distancia del personaje al objeto
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
                 foundNearby = true;
@@ -792,7 +821,11 @@ bool CheckCharacterCollision() {
         AABB objAABB = CalculateWorldAABB(g_collidableObjects[i]);
         bool collision = CheckCollision(charAABB, objAABB);
 
+<<<<<<< HEAD
         if (collision) {
+=======
+        if(collision) {
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
             return true;
         }
 
@@ -961,7 +994,11 @@ void processInput(GLFWwindow* window)
                 std::cout << "                                                      \r";
                 std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona Y para rotar/detener.\n";
 
+<<<<<<< HEAD
                 g_inspectZoom = 45.0f;
+=======
+                g_inspectZoom = 45.0f; 
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
             }
             // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
@@ -1022,7 +1059,11 @@ void processInput(GLFWwindow* window)
 
         }
         if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+<<<<<<< HEAD
             glm::vec3 newPosition = character_position - scaleV * forwardView;
+=======
+            glm::vec3 newPosition = character_position - scaleV * forwardView;  
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
@@ -1055,7 +1096,11 @@ void processInput(GLFWwindow* window)
 
             UpdateCameras();
         }
+<<<<<<< HEAD
     }
+=======
+    } 
+>>>>>>> f44e16a856e5ad5786ecd119955e9e56e7b8903b
     // --- FIN DE CONGELAR MOVIMIENTO ---
 
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
@@ -1152,3 +1197,4 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
+
