@@ -68,12 +68,13 @@ struct InteractiveObject {
     glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
 
 
-    InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n, 
-                      glm::vec3 targetOffset, glm::vec3 camPos) : 
+    InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
+        glm::vec3 targetOffset, glm::vec3 camPos) :
         model(m), position(pos), triggerRadius(radius), name(n),
         inspectRotationY(0.0f), inspectRotationX(0.0f), isAutoRotatingY(false),
-        inspectTargetOffset(targetOffset), inspectCamPos(camPos) 
-    { } 
+        inspectTargetOffset(targetOffset), inspectCamPos(camPos)
+    {
+    }
 };
 
 // Functions
@@ -87,7 +88,7 @@ bool CheckCollisionAtPosition(const glm::vec3& position);
 void InitializeCollidableObjects();
 void UpdateFirstPersonCamera();
 void UpdateThirdPersonCamera();
-void UpdateCameras(); 
+void UpdateCameras();
 
 // Definición de callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -145,6 +146,7 @@ bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
 glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 
+// --- POSICIONES DE OBJETOS ---
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
@@ -154,6 +156,12 @@ glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
 glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
+
+// --- AÑADIR POSICIONES PARA OBJETOS NUEVOS ---
+glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 estante1Pos = glm::vec3(-29.181f, 0.0f, -22.93f); // Posición de ejemplo
+glm::vec3 estante2Pos = glm::vec3(28.64f, 0.0f, -12.3f); // Posición de ejemplo
+// --- FIN DE AÑADIR ---
 
 
 // Shaders
@@ -167,6 +175,12 @@ Shader* dynamicShader;
 
 // Carga la información de los modelo
 Model* museo; // Entorno
+
+// --- AÑADIR PUNTEROS PARA OBJETOS NUEVOS ---
+Model* piso;
+Model* EstanteIzquierda;
+Model* EstanteDerecha;
+// --- FIN DE AÑADIR ---
 
 Model* Xiucoatl;
 Model* piramide;
@@ -266,20 +280,20 @@ void CreateDebugCube() {
          0.5f, -0.5f,  0.5f,
 
          // Cara inferior
-         -0.5f, -0.5f, -0.5f,
-          0.5f, -0.5f, -0.5f,
-          0.5f, -0.5f,  0.5f,
-          0.5f, -0.5f,  0.5f,
-         -0.5f, -0.5f,  0.5f,
-         -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
 
-         // Cara superior
-         -0.5f,  0.5f, -0.5f,
-         -0.5f,  0.5f,  0.5f,
-          0.5f,  0.5f,  0.5f,
-          0.5f,  0.5f,  0.5f,
-          0.5f,  0.5f, -0.5f,
-         -0.5f,  0.5f, -0.5f
+        // Cara superior
+       -0.5f,  0.5f, -0.5f,
+       -0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f, -0.5f,
+       -0.5f,  0.5f, -0.5f
     };
 
     unsigned int VAO, VBO;
@@ -417,6 +431,13 @@ bool Start() {
 
     // --- Carga de modelos modulares ---
     museo = new Model("models/IllumModels/proyectofinal/Entorno.fbx");
+
+    // --- AÑADIR CARGA DE MODELOS ---
+    piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
+    EstanteIzquierda = new Model("models/IllumModels/proyectofinal/EstanteIzquierda.fbx");
+    EstanteDerecha = new Model("models/IllumModels/proyectofinal/EstanteDerecha.fbx");
+    // --- FIN DE AÑADIR ---
+
     Xiucoatl = new Model("models/IllumModels/estatua.fbx");
     piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
     PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
@@ -436,32 +457,25 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 1.0f),
         glm::vec3(0.0f, 5.0f, 11.0f));
 
-    g_interactiveObjects.emplace_back(piramide, piramidePos, 4.0f, "Piramides",
+    g_interactiveObjects.emplace_back(piramide, piramidePos, 6.0f, "Piramides",
         glm::vec3(0.0f, 2.0f, 0.0f),  // Mirar 1m arriba
         glm::vec3(0.0f, 3.0f, 10.0f)); // Pararse 2m arriba, 5m enfrente
 
-    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 18.0f, "PiedraSol",
+    g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 19.0f, "PiedraSol",
         glm::vec3(0.0f, 7.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(0.0f, 7.0f, 15.0f)); // Pararse 3m enfrente
 
-    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 3.8f, "Coatlicue",
+    g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 4.0f, "Coatlicue",
         glm::vec3(-5.0f, 6.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(16.0f, 6.0f, 0.0f)); // Pararse 4m a la IZQUIERDA (X negativo)
 
     // Objeto: PlatoAntiguo - Vista superior (Top-Down)
-    g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 3.0f, "PlatoAntiguo",
+    g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 4.0f, "PlatoAntiguo",
         glm::vec3(0.0f, 5.0f, 0.0f),  // Mirar justo encima del plato
         glm::vec3(0.0f, 6.0f, -7.0f)); // Pararse 3m ARRIBA, un poco enfrente
 
-    g_interactiveObjects.emplace_back(Craneo, CraneoPos, 3.0f, "Craneo",
-<<<<<<< HEAD
-        glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(0.0f, 6.0f, 3.0f));
+    g_interactiveObjects.emplace_back(Craneo, CraneoPos, 4.0f, "Craneo",
 
-    // Objeto: Incenciario - Vista lateral derecha
-    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 3.0f, "Incenciario",
-=======
->>>>>>> origin/ColisionesConObjetos
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f));
 
@@ -469,11 +483,11 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(3.0f, 6.0f, 8.0f));
 
-    g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 3.0f, "Xochipilli",
+    g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 4.0f, "Xochipilli",
         glm::vec3(5.0f, 5.0f, 0.0f),
         glm::vec3(-15.0f, 6.0f, 0.0f));
 
-    g_interactiveObjects.emplace_back(Bracero, BraceroPos, 3.0f, "Bracero",
+    g_interactiveObjects.emplace_back(Bracero, BraceroPos, 6.0f, "Bracero",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f));
     // --- Fin de Carga de modelos ---
@@ -497,7 +511,7 @@ bool Start() {
     Light light01;
     light01.Position = glm::vec3(11.5f, 20.3f, -1.7f);
     light01.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
-    light01.Power = glm::vec4(50.0f);  
+    light01.Power = glm::vec4(50.0f);
 
     gLights.push_back(light01);
 
@@ -505,7 +519,7 @@ bool Start() {
     Light light02;
     light02.Position = glm::vec3(-10.0f, 20.3f, -1.7f);
     light02.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
-    light02.Power = glm::vec4(50.0f); 
+    light02.Power = glm::vec4(50.0f);
     gLights.push_back(light02);
 
     Light light03;
@@ -517,7 +531,7 @@ bool Start() {
     Light light04;
     light04.Position = glm::vec3(-16.7f, 22.0f, -88.7f);
     light04.Color = glm::vec4(0.09f, 0.07f, 0.06f, 1.0f);
-    light04.Power = glm::vec4(60.0f); 
+    light04.Power = glm::vec4(60.0f);
 
     gLights.push_back(light04);
 
@@ -578,7 +592,8 @@ bool Update() {
         bool foundNearby = false;
         for (auto& obj : g_interactiveObjects) {
 
-            float distance = glm::distance(character_position, obj.position); 
+            // --- ¡¡CORRECCIÓN!! Usa la posición del personaje ---
+            float distance = glm::distance(character_position, obj.position);
 
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
@@ -625,10 +640,8 @@ bool Update() {
         // 3. La cámara mira al 'targetCenter'
         view = glm::lookAt(camPos, targetCenter, glm::vec3(0.0f, 1.0f, 0.0f));
 
-        // --- ¡CAMBIO AQUÍ! ---
         // 4. Usamos g_inspectZoom (controlado por el scroll) para la proyección
         projection = glm::perspective(glm::radians(g_inspectZoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
-        // --- FIN DE CAMBIO ---
     }
     // SI ESTAMOS EN MODO NORMAL (explorando)
     else
@@ -644,7 +657,7 @@ bool Update() {
             view = camera3rd.GetViewMatrix();
         }
         else if (activeCamera == 2) {
-            // Cámara flotante
+            // Cámara en primera persona
             projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
             view = camera1st.GetViewMatrix();
         }
@@ -677,7 +690,23 @@ bool Update() {
                 SetLightUniformFloat(mLightsShader, "distance", i, gLights[i].distance);
             }
 
-            mLightsShader->setVec3("eye", camera1st.Position);
+            // --- ¡CORRECCIÓN DE POSICIÓN DE OJO! ---
+            if (g_interactingObject != nullptr) {
+                // En modo inspección, la cámara está en camPos
+                glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
+                mLightsShader->setVec3("eye", camPos);
+            }
+            else if (activeCamera == 0) {
+                mLightsShader->setVec3("eye", camera_float.Position);
+            }
+            else if (activeCamera == 1) {
+                mLightsShader->setVec3("eye", camera3rd.Position);
+            }
+            else if (activeCamera == 2) {
+                mLightsShader->setVec3("eye", camera1st.Position);
+            }
+            // --- FIN DE CORRECCIÓN ---
+
 
             // Aplicamos propiedades materiales
             mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
@@ -694,6 +723,29 @@ bool Update() {
             model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
             mLightsShader->setMat4("model", model);
             museo->Draw(*mLightsShader);
+
+            // --- AÑADIR DIBUJADO DE NUEVOS OBJETOS ---
+            // Dibujar PISO
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, pisoPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            piso->Draw(*mLightsShader);
+
+            // Dibujar ESTANTE 1
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante1Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            EstanteIzquierda->Draw(*mLightsShader);
+
+            // Dibujar ESTANTE 2
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante2Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            EstanteDerecha->Draw(*mLightsShader);
+            // --- FIN DE AÑADIR ---
 
             // 2. Dibujar TODOS los objetos interactivos
             for (auto& obj : g_interactiveObjects) {
@@ -742,14 +794,13 @@ bool Update() {
                 triggerBox.max = obj.position + glm::vec3(obj.triggerRadius, 2.0f, obj.triggerRadius);
                 DrawBoundingBox(triggerBox, glm::vec3(0.0f, 0.0f, 1.0f), projection, view);
                 DrawLightDebug(projection, view);
-
             }
-
-			
         }
     }
 
     // Objeto animado
+    // --- DIBUJAR PERSONAJE SOLO SI NO ESTÁ EN 1RA PERSONA ---
+    if (activeCamera != 2)
     {
         //character_ninia_normal->UpdateAnimation(deltaTime);
         character01->UpdateAnimation(deltaTime);
@@ -853,7 +904,8 @@ void UpdateInteractionsWithCollision() {
 
     if (g_interactingObject == nullptr) {
         for (auto& obj : g_interactiveObjects) {
-            float distance = glm::distance(position_origin, obj.position);
+            // --- ¡¡CORRECCIÓN!! Usa la posición del personaje ---
+            float distance = glm::distance(character_position, obj.position);
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
                 std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
@@ -864,61 +916,79 @@ void UpdateInteractionsWithCollision() {
 }
 
 void InitializeCollidableObjects() {
-    // Museo
-    //g_collidableObjects.push_back({museo, glm::vec3(0.0f, 0.0f, 0.0f), 
-    //    AABB(glm::vec3(-0.5f, 0.0f, -0.5f),   // ← MUCHO más pequeño
-    //        glm::vec3(0.5f, 2.0f, 0.5f)),    // ← MUCHO más pequeño
-    //        glm::vec3(1.0f), 0.0f
-    //});
 
-    // Estatuas y objetos interactivos
+    // --- ¡¡IMPORTANTE!! AÑADIR CAJA(S) PARA EL MUSEO/PAREDES ---
+    // Esta es UNA sola caja de ejemplo. Necesitarás varias para rodear el museo.
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -150.0f),
+         AABB(glm::vec3(-50.0f, 0.0f, -1.0f),  // Una pared trasera de 100 de ancho
+              glm::vec3(50.0f, 20.0f, 1.0f)), // y 20 de alto
+         glm::vec3(1.0f), 0.0f
+        });
+    // --- FIN DE EJEMPLO DE MUSEO ---
+
+    // --- AÑADIR ESTANTES (PERO NO EL PISO) ---
+    // ¡Asegúrate de que los punteros 'estante1' y 'estante2' sean válidos!
+    g_collidableObjects.push_back({ EstanteIzquierda, estante1Pos,
+                                    AABB(glm::vec3(-2.0f, 0.0f, -4.0f), // Caja de ejemplo
+                                         glm::vec3(2.0f, 7.0f, 4.0f)),
+                                    glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ EstanteDerecha, estante2Pos,
+                                    AABB(glm::vec3(-4.0f, 0.0f, -7.0f), // Caja de ejemplo
+                                         glm::vec3(4.0f, 7.0f, 7.0f)),
+                                    glm::vec3(1.0f), 0.0f });
+    // --- FIN DE AÑADIR ---
+
+
+    // Estatuas y objetos interactivos (esto ya estaba bien)
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
-                                  AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
-                                        glm::vec3(4.5f, 8.0f, 4.5f)),  // max (x, y, z),    // ← Más pequeño
-                                        glm::vec3(1.0f), 0.0f });
-    
+                                    AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
+                                         glm::vec3(4.5f, 8.0f, 4.5f)),   // max (x, y, z),     // ← Más pequeño
+                                    glm::vec3(1.0f), 0.0f });
+
     g_collidableObjects.push_back({ piramide, piramidePos,
-                                  AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
-                                       glm::vec3(4.0f, 4.0f, 4.0f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
+                                         glm::vec3(4.0f, 4.0f, 4.0f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
-                                  AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
-                                       glm::vec3(13.0f, 10.0f, 17.0f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
+                                         glm::vec3(13.0f, 10.0f, 17.0f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
-                                  AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
-                                       glm::vec3(2.8f, 15.0f, 3.5f)),
-                                  glm::vec3(1.0f), 0.0f });
-    
+                                    AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
+                                         glm::vec3(2.8f, 15.0f, 3.5f)),
+                                    glm::vec3(1.0f), 0.0f });
+
     g_collidableObjects.push_back({ PlatoAntiguo, PlatoAntiguoPos,
-                                  AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
-                                       glm::vec3(1.8f, 5.0f, 2.0f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
+                                         glm::vec3(1.8f, 5.0f, 2.0f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Craneo, CraneoPos,
-                                  AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                       glm::vec3(1.0f, 5.0f, 1.0f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                         glm::vec3(1.0f, 5.0f, 1.0f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Incenciario, IncenciarioPos,
-                                  AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
-                                       glm::vec3(3.0f, 8.0f, 3.3f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
+                                         glm::vec3(3.0f, 8.0f, 3.3f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Xochipilli, XochipilliPos,
-                                  AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
-                                       glm::vec3(1.5f, 8.0f, 2.5f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
+                                         glm::vec3(1.5f, 8.0f, 2.5f)),
+                                    glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Bracero, BraceroPos,
-                                  AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
-                                       glm::vec3(2.0f, 8.0f, 2.0f)),
-                                  glm::vec3(1.0f), 0.0f });
+                                    AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
+                                         glm::vec3(2.0f, 8.0f, 2.0f)),
+                                    glm::vec3(1.0f), 0.0f });
 }
 
 
+// --- ¡¡FUNCIÓN 'processInput' CORREGIDA!! ---
 void processInput(GLFWwindow* window)
 {
     static bool f1Pressed = false, f2Pressed = false, f3Pressed = false;
@@ -927,34 +997,39 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    if (character_run == true) {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(FORWARD, deltaTime * 4.0f);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(BACKWARD, deltaTime * 4.0f);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(LEFT, deltaTime * 4.0f);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(UP, deltaTime * 4.0f);
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(DOWN, deltaTime * 4.0f);
+    // --- Controles de cámara flotante (F1) ---
+    if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
+        if (character_run == true) {
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(FORWARD, deltaTime * 4.0f);
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(BACKWARD, deltaTime * 4.0f);
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(LEFT, deltaTime * 4.0f);
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(UP, deltaTime * 4.0f);
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(DOWN, deltaTime * 4.0f);
+        }
+        else {
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(FORWARD, deltaTime);
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(BACKWARD, deltaTime);
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(LEFT, deltaTime);
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(RIGHT, deltaTime);
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(UP, deltaTime);
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+                camera_float.ProcessKeyboard(DOWN, deltaTime);
+        }
     }
-    else {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(BACKWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(LEFT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(RIGHT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(UP, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-            camera_float.ProcessKeyboard(DOWN, deltaTime);
-    }
+    // --- Fin controles cámara flotante ---
+
 
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1005,7 +1080,6 @@ void processInput(GLFWwindow* window)
                 std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona Y para rotar/detener.\n";
 
                 g_inspectZoom = 45.0f;
-                g_inspectZoom = 45.0f; 
             }
             // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
@@ -1051,37 +1125,31 @@ void processInput(GLFWwindow* window)
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
-                camera3rd.ProcessKeyboard(FORWARD, deltaTime);
+                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
-
                 UpdateCameras();
             }
             else {
                 std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
-
                 character_position = oldPosition;
                 UpdateCameras();
-
             }
 
         }
         if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
 
-            glm::vec3 newPosition = character_position - scaleV * forwardView;  
+            glm::vec3 newPosition = character_position - scaleV * forwardView;
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
-                camera3rd.ProcessKeyboard(FORWARD, deltaTime);
+                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
-
                 UpdateCameras();
             }
             else {
                 std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
-
                 character_position = oldPosition;
                 UpdateCameras();
-
             }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
@@ -1097,11 +1165,10 @@ void processInput(GLFWwindow* window)
             if (character_run) {
                 rotateCharacter -= 2.0f;
             }
-
             UpdateCameras();
         }
 
-    } 
+    }
     // --- FIN DE CONGELAR MOVIMIENTO ---
 
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
@@ -1137,6 +1204,8 @@ void processInput(GLFWwindow* window)
         f3Pressed = false;
     }
 }
+// --- FIN DE LA FUNCIÓN CORREGIDA ---
+
 
 // glfw: Actualizamos el puerto de vista si hay cambios del tamaño
 // de la ventana
@@ -1198,4 +1267,3 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
-
