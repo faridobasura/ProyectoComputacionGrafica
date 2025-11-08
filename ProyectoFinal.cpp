@@ -319,6 +319,20 @@ void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projecti
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
+void DrawLightDebug(glm::mat4 projection, glm::mat4 view) {
+    if (!showCollisionBoxes) return;
+
+    for (const auto& light : gLights) {
+        AABB lightVolume;
+        float lightSize = 0.2f; // Tamaño visual de la luz
+        lightVolume.min = light.Position - glm::vec3(lightSize);
+        lightVolume.max = light.Position + glm::vec3(lightSize);
+
+        glm::vec3 lightColor = glm::vec3(light.Color.r, light.Color.g, light.Color.b);
+
+        DrawBoundingBox(lightVolume, lightColor, projection, view);
+    }
+}
 
 void UpdateFirstPersonCamera() {
     camera1st.Position = character_position + glm::vec3(0.0f, 1.8f, 0.0f);
@@ -470,24 +484,26 @@ bool Start() {
     UpdateCameras();
 
     // Lights configuration
+
     Light light01;
-    light01.Position = glm::vec3(5.0f, 2.0f, 5.0f);
-    light01.Color = glm::vec4(0.2f, 0.0f, 0.0f, 1.0f);
+    light01.Position = glm::vec3(5.0f, 10.0f, 5.0f);
+    light01.Color = glm::vec4(0.3f, 0.0f, 0.0f, 1.0f);
     gLights.push_back(light01);
 
+
     Light light02;
-    light02.Position = glm::vec3(-5.0f, 2.0f, 5.0f);
-    light02.Color = glm::vec4(0.0f, 0.2f, 0.0f, 1.0f);
+    light02.Position = glm::vec3(-5.0f, 10.0f, 5.0f);
+    light02.Color = glm::vec4(0.3f, 0.6f, 0.0f, 0.6f);
     gLights.push_back(light02);
 
     Light light03;
-    light03.Position = glm::vec3(5.0f, 2.0f, -5.0f);
-    light03.Color = glm::vec4(0.0f, 0.0f, 0.2f, 1.0f);
+    light03.Position = glm::vec3(5.0f, 10.0f, -5.0f);
+    light03.Color = glm::vec4(0.3f, 0.0f, 0.6f, 0.6f);
     gLights.push_back(light03);
 
     Light light04;
-    light04.Position = glm::vec3(-5.0f, 2.0f, -5.0f);
-    light04.Color = glm::vec4(0.2f, 0.2f, 0.0f, 1.0f);
+    light04.Position = glm::vec3(-5.0f, 10.0f, -5.0f);
+    light04.Color = glm::vec4(0.3f, 0.6f, 0.0f, 0.6f);
     gLights.push_back(light04);
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
@@ -711,7 +727,10 @@ bool Update() {
                 triggerBox.min = obj.position - glm::vec3(obj.triggerRadius, 0.1f, obj.triggerRadius);
                 triggerBox.max = obj.position + glm::vec3(obj.triggerRadius, 2.0f, obj.triggerRadius);
                 DrawBoundingBox(triggerBox, glm::vec3(0.0f, 0.0f, 1.0f), projection, view);
+                DrawLightDebug(projection, view);
             }
+
+			
         }
     }
 
@@ -902,6 +921,10 @@ void processInput(GLFWwindow* window)
             camera_float.ProcessKeyboard(LEFT, deltaTime * 4.0f);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(UP, deltaTime * 4.0f);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(DOWN, deltaTime * 4.0f);
     }
     else {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -912,6 +935,10 @@ void processInput(GLFWwindow* window)
             camera_float.ProcessKeyboard(LEFT, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera_float.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera_float.ProcessKeyboard(DOWN, deltaTime);
     }
 
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
@@ -926,7 +953,6 @@ void processInput(GLFWwindow* window)
             showCollisionBoxes = !showCollisionBoxes;
             if (showCollisionBoxes && (!debugShader || debugShader->ID == 0)) {
                 std::cout << "No se puede activar debug - shader no disponible" << std::endl;
-                showCollisionBoxes = false;
             }
             else {
                 std::cout << "Debug colisiones: " << (showCollisionBoxes ? "ACTIVADO" : "DESACTIVADO") << std::endl;
