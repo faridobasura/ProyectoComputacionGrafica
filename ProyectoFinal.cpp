@@ -12,6 +12,7 @@
 
 // Cargar antes glew
 #include <text_render.h>
+#include <TextManager.h>
 
 
 // GLFW: https://www.glfw.org/
@@ -113,8 +114,6 @@ bool foundNearby = false;
 
 // --- VARIABLES CÁMARA DE INSPECCIÓN ---
 float g_inspectZoom = 45.0f; // --- ¡NUEVO! Variable para el zoom (inicia en 45 grados de FOV) ---
-
-TextRenderer text;
 
 // Tamaño en pixeles de la ventana
 const unsigned int SCR_WIDTH = 1024;
@@ -224,6 +223,10 @@ float wavesTime = 0.0f;
 
 // Audio
 ISoundEngine* SoundEngine = createIrrKlangDevice();
+
+//Texto
+TextRenderer textRenderer;
+TextManager textManager(textRenderer, 1024, 768);
 
 // selección de cámara
 int activeCamera = 1;
@@ -429,6 +432,13 @@ bool Start() {
     
     textShaderID = textShader->ID;
 
+    textManager.textShaderID = textShaderID;
+
+    if (!textManager.isContext()) {
+        std::cerr << "Error: no se pudo inicializar el TextManager\n";
+        return -1;
+    }
+
     CreateDebugCube();
 
     // Máximo número de huesos: 100
@@ -542,19 +552,6 @@ bool Start() {
 
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
-    if (!glfwGetCurrentContext()) {
-        std::cerr << "Error: No hay un contexto de OpenGL activo antes de inicializar TextRenderer\n";
-    }
-    else {
-        try {
-            text.Init(textShaderID, SCR_WIDTH, SCR_HEIGHT, "fonts/cambriab.ttf");
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Error al inicializar texto: " << e.what() << std::endl;
-        }
-
-    }
-    
 
     InitializeCollidableObjects();
 
@@ -605,7 +602,7 @@ bool Update() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Procesa la entrada del teclado o mouse
-    processInput(window);
+    
 
     // --- LÓGICA DE INTERACCIÓN (Proximidad) ---
     g_nearbyObject = nullptr; // Reiniciar cada frame
@@ -617,24 +614,16 @@ bool Update() {
 
             float distance = glm::distance(character_position, obj.position);
 
-            if (distance < obj.triggerRadius) {
+            if (distance <= obj.triggerRadius) {
                 g_nearbyObject = &obj;
                 foundNearby = true;
-                break; // Encontramos uno, dejamos de buscar
+                break; 
+            }
+            else {
+                foundNearby = false;
             }
         }
-
-        // --- LÓGICA DEL TEXTO (simulada en consola) ---
-        if (foundNearby) {
-            std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
-            text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-        }
-        else {
-            // Limpia la línea
-            std::cout << "                                                             \r";
-        }
     }
-    // --- FIN DE LÓGICA DE INTERACCIÓN ---
 
     // --- LÓGICA DE AUTO-ROTACIÓN ---
     if (g_interactingObject != nullptr && g_interactingObject->isAutoRotatingY) {
@@ -687,7 +676,7 @@ bool Update() {
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
-    // Cubemap (fondo)
+    //Skybbox
     {
         mainCubeMap->drawCubeMap(*cubemapShader, projection, view);
     }
@@ -722,15 +711,12 @@ bool Update() {
             else if (activeCamera == 2) {
                 mLightsShader->setVec3("eye", camera1st.Position);
             }
-            // --- FIN DE CORRECCIÓN ---
-
 
             // Aplicamos propiedades materiales
             mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
             mLightsShader->setVec4("MaterialDiffuseColor", material01.diffuse);
             mLightsShader->setVec4("MaterialSpecularColor", material01.specular);
             mLightsShader->setFloat("transparency", material01.transparency);
-
 
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
@@ -745,44 +731,32 @@ bool Update() {
             mLightsShader->setMat4("model", model);
             piso->Draw(*mLightsShader);
 
-            // Dibujar ESTANTE 1
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante1Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
             EstanteIzquierda->Draw(*mLightsShader);
 
-            // Dibujar ESTANTE 2
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante2Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
             EstanteDerecha->Draw(*mLightsShader);
-            // --- FIN DE AÑADIR ---
 
-            // 2. Dibujar TODOS los objetos interactivos
+            //Objetos Interactivos
             for (auto& obj : g_interactiveObjects) {
                 model = glm::mat4(1.0f);
-                // 1. Mover al lugar correcto
                 model = glm::translate(model, obj.position);
 
-                // Aplicamos las rotaciones de inspección guardadas en el objeto
-                // 2. Rotar en Y (controlado por auto-rotación)
                 model = glm::rotate(model, obj.inspectRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
-                // 3. Rotar en X (ya no se usa)
                 model = glm::rotate(model, obj.inspectRotationX, glm::vec3(1.0f, 0.0f, 0.0f));
-                // --- FIN DE NUEVA LÓGICA ---
-
-                // 4. Aplicar rotación base de FBX (la que tenías)
                 model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
                 mLightsShader->setMat4("model", model);
-                obj.model->Draw(*mLightsShader); // Dibuja el modelo del objeto
+                obj.model->Draw(*mLightsShader); 
             }
-            // --- FIN DE BUCLE DE DIBUJADO ---
         }
 
-        glUseProgram(0);
 
     }
     //Dibujo de cajas para debug
@@ -812,19 +786,14 @@ bool Update() {
     }
 
     // Objeto animado
-    // --- DIBUJAR PERSONAJE SOLO SI NO ESTÁ EN 1RA PERSONA ---
     if (activeCamera != 2)
     {
-        //character_ninia_normal->UpdateAnimation(deltaTime);
         character01->UpdateAnimation(deltaTime);
-        // Activación del shader del personaje
         dynamicShader->use();
 
-        // Aplicamos transformaciones de proyección y cámara (si las hubiera)
         dynamicShader->setMat4("projection", projection);
         dynamicShader->setMat4("view", view);
 
-        // Aplicamos transformaciones del modelo
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, character_position); // translate it down so it's at the center of the scene
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
@@ -833,28 +802,21 @@ bool Update() {
 
         dynamicShader->setMat4("model", model);
 
-        //dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character_ninia_normal->gBones);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
 
-        // Dibujamos el modelo
-        //character_ninia_normal->Draw(*dynamicShader);
         character01->Draw(*dynamicShader);
     }
-
-
     glUseProgram(0);
 
-    text.RenderText(" \n F1 - CAMARA FLOTANTE \n F2 - CAMARA 3ERA PERSONA \n F3 - CAMARA 1ERA PERSONA \n C - MODO DEBUG \n SHIFT - CORRER \n FLECHAS - DESPLAZARTE (PERSONAJE) \n WASD - DESPLAZARTE(CAMARA FLOTANTE)", (float)SCR_WIDTH * 0.01f, (float)SCR_HEIGHT * 1.0f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-    text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cout << "OpenGL Error: " << err << std::endl;
     }
 
     // glfw: swap buffers 
+    processInput(window);
     glfwSwapBuffers(window);
     glfwPollEvents();
-
 
     return true;
 }
@@ -993,7 +955,6 @@ void InitializeCollidableObjects() {
         });
 
     // --- AÑADIR ESTANTES (PERO NO EL PISO) ---
-    // ¡Asegúrate de que los punteros 'estante1' y 'estante2' sean válidos!
     g_collidableObjects.push_back({ EstanteIzquierda, estante1Pos,
                                     AABB(glm::vec3(-2.0f, 0.0f, -4.0f), // Caja de ejemplo
                                          glm::vec3(2.0f, 7.0f, 4.0f)),
@@ -1004,7 +965,6 @@ void InitializeCollidableObjects() {
                                          glm::vec3(4.0f, 7.0f, 7.0f)),
                                     glm::vec3(1.0f), 0.0f });
 
-    // Estatuas y objetos interactivos (esto ya estaba bien)
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
                                     AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
                                          glm::vec3(4.5f, 8.0f, 4.5f)),   // max (x, y, z),     // ← Más pequeño
@@ -1052,7 +1012,6 @@ void InitializeCollidableObjects() {
 
 }
 
-
 void processInput(GLFWwindow* window)
 {
     static bool f1Pressed = false, f2Pressed = false, f3Pressed = false, keyPressed = false, showHelp = false;
@@ -1063,17 +1022,17 @@ void processInput(GLFWwindow* window)
     if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
         if (character_run == true) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(FORWARD, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(FORWARD, deltaTime * 8.0f);
             if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(BACKWARD, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(BACKWARD, deltaTime * 8.0f);
             if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(LEFT, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(LEFT, deltaTime * 8.0f);
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(RIGHT, deltaTime * 8.0f);
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(UP, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(UP, deltaTime * 8.0f);
             if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(DOWN, deltaTime * 4.0f);
+                camera_float.ProcessKeyboard(DOWN, deltaTime * 8.0f);
         }
         else {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -1128,10 +1087,10 @@ void processInput(GLFWwindow* window)
     }
 
     if (showHelp) {
-        //glUseProgram(textShaderID);
+        glUseProgram(textShaderID);
 
         std::string helpText =
-            "F1 - CAMARA FLOTANTE\n"
+            "\nF1 - CAMARA FLOTANTE\n"
             "F2 - CAMARA 3ERA PERSONA\n"
             "F3 - CAMARA 1ERA PERSONA\n"
             "C - MODO DEBUG\n"
@@ -1140,11 +1099,10 @@ void processInput(GLFWwindow* window)
             "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
             "H - MOSTRAR/OCULTAR AYUDA";
 
-        text.RenderText(helpText,
-            (float)SCR_WIDTH * 0.01f,
-            (float)SCR_HEIGHT * 0.9f,
-            0.4f,
-            glm::vec3(1.0f, 0.9f, 0.1f));
+        textManager.setHelpText(helpText);;
+    }
+    else {
+        glUseProgram(0);
     }
 
 
@@ -1165,26 +1123,6 @@ void processInput(GLFWwindow* window)
             scaleV = walkSpeed;
             std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
         }
-    }
-    if (foundNearby) {
-        std::cout << "En Found Nearby";
-        glUseProgram(textShaderID);
-
-        std::string helpText =
-            "F1 - CAMARA FLOTANTE\n"
-            "F2 - CAMARA 3ERA PERSONA\n"
-            "F3 - CAMARA 1ERA PERSONA\n"
-            "C - MODO DEBUG\n"
-            "SHIFT - CORRER\n"
-            "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
-            "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
-            "H - MOSTRAR/OCULTAR AYUDA";
-
-        text.RenderText(helpText,
-            (float)SCR_WIDTH * 0.01f,
-            (float)SCR_HEIGHT * 0.9f,
-            0.4f,
-            glm::vec3(1.0f, 0.9f, 0.1f));
     }
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
@@ -1208,34 +1146,37 @@ void processInput(GLFWwindow* window)
                 g_interactingObject = nullptr;
             }
         }
-        g_f_keyPressed = true; // Marcamos que la tecla está presionada
     }
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
         g_f_keyPressed = false; // Reseteamos la bandera cuando se suelta
     }
 
-    if (g_interactingObject != nullptr && glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
-        if (!g_y_keyPressed) {
-            g_interactingObject->isAutoRotatingY = !g_interactingObject->isAutoRotatingY;
-            std::cout << "                                                      \r";
-            if (g_interactingObject->isAutoRotatingY) {
-                std::cout << "Rotacion activada. Presiona Y para detener. Presiona F para salir.\n";
+    if (g_interactingObject != nullptr) {
+
+        textManager.setTextByWorld("\tY - Para rotar");
+
+        if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+            if (!g_y_keyPressed) {
+                g_interactingObject->isAutoRotatingY = !g_interactingObject->isAutoRotatingY;
+                std::cout << "                                                      \r";
+                if (g_interactingObject->isAutoRotatingY) {
+                    std::cout << "Rotacion activada. Presiona Y para detener. Presiona F para salir.\n";
+                }
+                else {
+                    std::cout << "Rotacion detenida. Presiona Y para activar. Presiona F para salir.\n";
+                }
             }
-            else {
-                std::cout << "Rotacion detenida. Presiona Y para activar. Presiona F para salir.\n";
-            }
+            g_y_keyPressed = true;
         }
-        g_y_keyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE) {
-        g_y_keyPressed = false;
+        if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_RELEASE) {
+            g_y_keyPressed = false;
+        }
     }
 
-    // --- CONGELAR MOVIMIENTO MIENTRAS SE INTERACTÚA ---
+
     // Solo permitimos mover al personaje si NO estamos en modo interacción
     if (g_interactingObject == nullptr) {
-
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
             glm::vec3 newPosition = character_position + scaleV * forwardView;
             glm::vec3 oldPosition = character_position;
@@ -1283,7 +1224,6 @@ void processInput(GLFWwindow* window)
         }
 
     }
-    // --- FIN DE CONGELAR MOVIMIENTO ---
 
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
         if (!f1Pressed) {
@@ -1317,10 +1257,12 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_RELEASE) {
         f3Pressed = false;
     }
+
+    if (foundNearby) {
+        textManager.setTextByWorld("F - Para interactuar");
+    }
+
 }
-// --- FIN DE LA FUNCIÓN CORREGIDA ---
-
-
 // glfw: Actualizamos el puerto de vista si hay cambios del tamaño
 // de la ventana
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
