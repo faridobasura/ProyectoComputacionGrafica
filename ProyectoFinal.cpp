@@ -587,12 +587,11 @@ bool Update() {
     // --- LÓGICA DE INTERACCIÓN (Proximidad) ---
     g_nearbyObject = nullptr; // Reiniciar cada frame
 
-    // 1. SOLO si NO estamos interactuando, buscamos objetos cercanos
+    // SOLO si NO estamos interactuando, buscamos objetos cercanos
     if (g_interactingObject == nullptr) {
         bool foundNearby = false;
         for (auto& obj : g_interactiveObjects) {
 
-            // --- ¡¡CORRECCIÓN!! Usa la posición del personaje ---
             float distance = glm::distance(character_position, obj.position);
 
             if (distance < obj.triggerRadius) {
@@ -604,7 +603,6 @@ bool Update() {
 
         // --- LÓGICA DEL TEXTO (simulada en consola) ---
         if (foundNearby) {
-            // \r mueve el cursor al inicio de la línea (evita spam)
             std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
         }
         else {
@@ -904,7 +902,6 @@ void UpdateInteractionsWithCollision() {
 
     if (g_interactingObject == nullptr) {
         for (auto& obj : g_interactiveObjects) {
-            // --- ¡¡CORRECCIÓN!! Usa la posición del personaje ---
             float distance = glm::distance(character_position, obj.position);
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
@@ -981,11 +978,9 @@ void InitializeCollidableObjects() {
                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ EstanteDerecha, estante2Pos,
-                                    AABB(glm::vec3(-4.0f, 0.0f, -7.0f), // Caja de ejemplo
+                                    AABB(glm::vec3(-4.0f, 0.0f, -7.0f), 
                                          glm::vec3(4.0f, 7.0f, 7.0f)),
                                     glm::vec3(1.0f), 0.0f });
-    // --- FIN DE AÑADIR ---
-
 
     // Estatuas y objetos interactivos (esto ya estaba bien)
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
@@ -1033,19 +1028,9 @@ void InitializeCollidableObjects() {
                                          glm::vec3(2.0f, 8.0f, 2.0f)),
                                     glm::vec3(1.0f), 0.0f });
 
-    for (size_t i = 0; i < g_collidableObjects.size(); ++i) {
-        const auto& obj = g_collidableObjects[i];
-        std::cout << "Objeto " << i
-            << " en posición: "
-            << obj.position.x << ", "
-            << obj.position.y << ", "
-            << obj.position.z << std::endl;
-    }
-
 }
 
 
-// --- ¡¡FUNCIÓN 'processInput' CORREGIDA!! ---
 void processInput(GLFWwindow* window)
 {
     static bool f1Pressed = false, f2Pressed = false, f3Pressed = false;
@@ -1054,7 +1039,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // --- Controles de cámara flotante (F1) ---
     if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
         if (character_run == true) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -1085,7 +1069,6 @@ void processInput(GLFWwindow* window)
                 camera_float.ProcessKeyboard(DOWN, deltaTime);
         }
     }
-    // --- Fin controles cámara flotante ---
 
 
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
@@ -1129,7 +1112,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         if (!g_f_keyPressed) {
 
-            // CASO 1: Empezar a interactuar
             if (g_interactingObject == nullptr && g_nearbyObject != nullptr) {
                 g_interactingObject = g_nearbyObject;
                 g_nearbyObject = nullptr;
@@ -1138,7 +1120,6 @@ void processInput(GLFWwindow* window)
 
                 g_inspectZoom = 45.0f;
             }
-            // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
 
                 // Reseteamos el estado del objeto a su original al salir
@@ -1182,7 +1163,6 @@ void processInput(GLFWwindow* window)
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
-                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
                 UpdateCameras();
             }
@@ -1199,7 +1179,6 @@ void processInput(GLFWwindow* window)
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
-                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
                 UpdateCameras();
             }
@@ -1291,8 +1270,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     // SI ESTAMOS EN MODO INSPECCIÓN
     if (g_interactingObject != nullptr)
     {
-        // El mouse ya no hace nada en este modo de inspección, 
-        // la rotación es por teclado.
     }
     // SI ESTAMOS EN MODO NORMAL
     else
