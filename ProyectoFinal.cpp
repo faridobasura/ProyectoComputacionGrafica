@@ -1,10 +1,7 @@
 /*
 * * Proyecto Final
 */
-
 #include <iostream>
-
-#include <stdlib.h>
 #include <sstream> // Necesario para SetLightUniform...
 #include <vector>  // Para usar std::vector
 #include <string>  // Para usar std::string
@@ -13,8 +10,14 @@
 // https://glad.dav1d.de/
 #include <glad/glad.h>
 
+// Cargar antes glew
+#include <text_render.h>
+
+
 // GLFW: https://www.glfw.org/
 #include <GLFW/glfw3.h>
+
+#include <stdlib.h>
 
 // GLM: OpenGL Math library
 #include <glm/glm.hpp>
@@ -31,7 +34,7 @@
 #include <cubemap.h>
 
 #include <irrKlang.h>
-#include <algorithm> 
+#include <algorithm>
 
 
 using namespace irrklang;
@@ -55,17 +58,17 @@ struct CollidableObject {
 };
 
 struct InteractiveObject {
-    Model* model;            // Puntero al modelo cargado
-    glm::vec3   position;         // Posición en el mundo
-    float       triggerRadius;    // Radio de cercanía
-    std::string name;             // Nombre para depuración
+    Model* model;            
+    glm::vec3   position;         
+    float       triggerRadius;    
+    std::string name;             
 
-    float       inspectRotationY; // Rotación en Y (ahora automática)
-    float       inspectRotationX; // Rotación en X (ya no se usa, pero se queda para reset)
-    bool        isAutoRotatingY;  // Bandera para rotación automática
+    float       inspectRotationY; 
+    float       inspectRotationX; 
+    bool        isAutoRotatingY;  
 
-    glm::vec3   inspectTargetOffset; // Punto de mira (relativo a la posición del objeto)
-    glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
+    glm::vec3   inspectTargetOffset;
+    glm::vec3   inspectCamPos;       
 
 
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
@@ -98,6 +101,20 @@ void processInput(GLFWwindow* window);
 
 // Gobals
 GLFWwindow* window;
+GLuint textShaderID;
+
+//Interaccion
+std::vector<InteractiveObject> g_interactiveObjects; // Lista de exhibiciones
+InteractiveObject* g_nearbyObject = nullptr;      // Exhibición más cercana (para "Presiona F")
+InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que estamos interactuando
+bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
+bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
+bool foundNearby = false;
+
+// --- VARIABLES CÁMARA DE INSPECCIÓN ---
+float g_inspectZoom = 45.0f; // --- ¡NUEVO! Variable para el zoom (inicia en 45 grados de FOV) ---
+
+TextRenderer text;
 
 // Tamaño en pixeles de la ventana
 const unsigned int SCR_WIDTH = 1024;
@@ -125,8 +142,8 @@ Camera camera1st = character_position + glm::vec3(0.0f, 1.0f, 0.0f);
 Camera camera3rd = character_position + glm::vec3(0.0f, 1.3f, -0.05f);
 
 // Controladores para el movimiento del mouse
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
+float lastX = SCR_WIDTH / 4.0f;
+float lastY = SCR_HEIGHT / 4.0f;
 bool firstMouse = true;
 
 // Variables para la velocidad de reproducción
@@ -157,21 +174,18 @@ glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
 glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
-// --- AÑADIR POSICIONES PARA OBJETOS NUEVOS ---
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 estante1Pos = glm::vec3(-29.181f, 0.0f, -22.93f); // Posición de ejemplo
 glm::vec3 estante2Pos = glm::vec3(28.64f, 0.0f, -12.3f); // Posición de ejemplo
-// --- FIN DE AÑADIR ---
 
 
-// Shaders
 Shader* mLightsShader;
 Shader* proceduralShader;
 Shader* wavesShader;
 Shader* debugShader;
-
 Shader* cubemapShader;
 Shader* dynamicShader;
+Shader* textShader;
 
 // Carga la información de los modelo
 Model* museo; // Entorno
@@ -215,18 +229,6 @@ ISoundEngine* SoundEngine = createIrrKlangDevice();
 int activeCamera = 1;
 
 
-// --- VARIABLES GLOBALES DE INTERACCIÓN ---
-std::vector<InteractiveObject> g_interactiveObjects; // Lista de exhibiciones
-InteractiveObject* g_nearbyObject = nullptr;      // Exhibición más cercana (para "Presiona F")
-InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que estamos interactuando
-bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
-bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
-
-
-// --- VARIABLES CÁMARA DE INSPECCIÓN ---
-float g_inspectZoom = 45.0f; // --- ¡NUEVO! Variable para el zoom (inicia en 45 grados de FOV) ---
-// --- FIN DE VARIABLES ---
-
 // Entrada a función principal
 int main()
 {
@@ -245,7 +247,7 @@ int main()
 
 }
 
-void CreateDebugCube() {
+static void CreateDebugCube() {
     float vertices[] = {
         // Cara frontal
         -0.5f, -0.5f,  0.5f,
@@ -310,9 +312,10 @@ void CreateDebugCube() {
     glBindVertexArray(0);
 
     debugVAO = VAO;
+
 }
 
-void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projection, glm::mat4 view) {
+static void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projection, glm::mat4 view) {
     if (!showCollisionBoxes) return;
 
     debugShader->use();
@@ -343,7 +346,7 @@ void DrawBoundingBox(const AABB& box, const glm::vec3& color, glm::mat4 projecti
     glBindVertexArray(0);
 
 }
-void DrawLightDebug(glm::mat4 projection, glm::mat4 view) {
+static void DrawLightDebug(glm::mat4 projection, glm::mat4 view) {
     if (!showCollisionBoxes) return;
 
     for (const auto& light : gLights) {
@@ -416,13 +419,15 @@ bool Start() {
     // Activación de buffer de profundidad
     glEnable(GL_DEPTH_TEST);
 
-    // Compilación y enlace de shaders
     mLightsShader = new Shader("shaders/11_PhongShaderMultLights.vs", "shaders/11_PhongShaderMultLights.fs");
     proceduralShader = new Shader("shaders/12_ProceduralAnimation.vs", "shaders/12_ProceduralAnimation.fs");
     wavesShader = new Shader("shaders/13_wavesAnimation.vs", "shaders/13_wavesAnimation.fs");
     cubemapShader = new Shader("shaders/10_vertex_cubemap.vs", "shaders/10_fragment_cubemap.fs");
     dynamicShader = new Shader("shaders/10_vertex_skinning-IT.vs", "shaders/10_fragment_skinning-IT.fs");
     debugShader = new Shader("shaders/shader_debug.vs", "shaders/shader_debug.fs");
+    textShader = new Shader("shaders/text_shader.vs", "shaders/text_shader.fs");
+    
+    textShaderID = textShader->ID;
 
     CreateDebugCube();
 
@@ -537,36 +542,49 @@ bool Start() {
 
 
     // SoundEngine->play2D("sound/EternalGarden.mp3", true);
+    if (!glfwGetCurrentContext()) {
+        std::cerr << "Error: No hay un contexto de OpenGL activo antes de inicializar TextRenderer\n";
+    }
+    else {
+        try {
+            text.Init(textShaderID, SCR_WIDTH, SCR_HEIGHT, "fonts/cambriab.ttf");
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error al inicializar texto: " << e.what() << std::endl;
+        }
 
-     // --- INICIALIZAR COLISIONES ---
+    }
+    
+
     InitializeCollidableObjects();
+
 
     return true;
 }
 
 
-void SetLightUniformInt(Shader* shader, const char* propertyName, size_t lightIndex, int value) {
+static void SetLightUniformInt(Shader* shader, const char* propertyName, size_t lightIndex, int value) {
     std::ostringstream ss;
     ss << "allLights[" << lightIndex << "]." << propertyName;
     std::string uniformName = ss.str();
 
     shader->setInt(uniformName.c_str(), value);
 }
-void SetLightUniformFloat(Shader* shader, const char* propertyName, size_t lightIndex, float value) {
+static void SetLightUniformFloat(Shader* shader, const char* propertyName, size_t lightIndex, float value) {
     std::ostringstream ss;
     ss << "allLights[" << lightIndex << "]." << propertyName;
     std::string uniformName = ss.str();
 
     shader->setFloat(uniformName.c_str(), value);
 }
-void SetLightUniformVec4(Shader* shader, const char* propertyName, size_t lightIndex, glm::vec4 value) {
+static void SetLightUniformVec4(Shader* shader, const char* propertyName, size_t lightIndex, glm::vec4 value) {
     std::ostringstream ss;
     ss << "allLights[" << lightIndex << "]." << propertyName;
     std::string uniformName = ss.str();
 
     shader->setVec4(uniformName.c_str(), value);
 }
-void SetLightUniformVec3(Shader* shader, const char* propertyName, size_t lightIndex, glm::vec3 value) {
+static void SetLightUniformVec3(Shader* shader, const char* propertyName, size_t lightIndex, glm::vec3 value) {
     std::ostringstream ss;
     ss << "allLights[" << lightIndex << "]." << propertyName;
     std::string uniformName = ss.str();
@@ -581,6 +599,11 @@ bool Update() {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
+
+    // Activamos para objetos transparentes
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // Procesa la entrada del teclado o mouse
     processInput(window);
 
@@ -589,7 +612,7 @@ bool Update() {
 
     // SOLO si NO estamos interactuando, buscamos objetos cercanos
     if (g_interactingObject == nullptr) {
-        bool foundNearby = false;
+
         for (auto& obj : g_interactiveObjects) {
 
             float distance = glm::distance(character_position, obj.position);
@@ -604,6 +627,7 @@ bool Update() {
         // --- LÓGICA DEL TEXTO (simulada en consola) ---
         if (foundNearby) {
             std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
+            text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
         }
         else {
             // Limpia la línea
@@ -656,9 +680,10 @@ bool Update() {
         }
         else if (activeCamera == 2) {
             // Cámara en primera persona
-            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
+            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_HEIGHT, 0.1f, 200.0f);
             view = camera1st.GetViewMatrix();
         }
+
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
@@ -669,10 +694,6 @@ bool Update() {
     {
         mLightsShader->use();
         if (mLightsShader->ID != 0) {
-
-            // Activamos para objetos transparentes
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             mLightsShader->setMat4("projection", projection);
             mLightsShader->setMat4("view", view);
@@ -688,9 +709,7 @@ bool Update() {
                 SetLightUniformFloat(mLightsShader, "distance", i, gLights[i].distance);
             }
 
-            // --- ¡CORRECCIÓN DE POSICIÓN DE OJO! ---
             if (g_interactingObject != nullptr) {
-                // En modo inspección, la cámara está en camPos
                 glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
                 mLightsShader->setVec3("eye", camPos);
             }
@@ -712,9 +731,7 @@ bool Update() {
             mLightsShader->setVec4("MaterialSpecularColor", material01.specular);
             mLightsShader->setFloat("transparency", material01.transparency);
 
-            // --- BUCLE DE DIBUJADO MODIFICADO ---
 
-            // 1. Dibujar el entorno (el museo)
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -722,8 +739,6 @@ bool Update() {
             mLightsShader->setMat4("model", model);
             museo->Draw(*mLightsShader);
 
-            // --- AÑADIR DIBUJADO DE NUEVOS OBJETOS ---
-            // Dibujar PISO
             model = glm::mat4(1.0f);
             model = glm::translate(model, pisoPos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -829,6 +844,13 @@ bool Update() {
 
     glUseProgram(0);
 
+    text.RenderText(" \n F1 - CAMARA FLOTANTE \n F2 - CAMARA 3ERA PERSONA \n F3 - CAMARA 1ERA PERSONA \n C - MODO DEBUG \n SHIFT - CORRER \n FLECHAS - DESPLAZARTE (PERSONAJE) \n WASD - DESPLAZARTE(CAMARA FLOTANTE)", (float)SCR_WIDTH * 0.01f, (float)SCR_HEIGHT * 1.0f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+    text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cout << "OpenGL Error: " << err << std::endl;
+    }
+
     // glfw: swap buffers 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -897,7 +919,7 @@ bool CheckCollisionAtPosition(const glm::vec3& position) {
     return collision;
 }
 
-void UpdateInteractionsWithCollision() {
+static void UpdateInteractionsWithCollision() {
     g_nearbyObject = nullptr;
 
     if (g_interactingObject == nullptr) {
@@ -1033,8 +1055,7 @@ void InitializeCollidableObjects() {
 
 void processInput(GLFWwindow* window)
 {
-    static bool f1Pressed = false, f2Pressed = false, f3Pressed = false;
-    static bool keyPressed = false;
+    static bool f1Pressed = false, f2Pressed = false, f3Pressed = false, keyPressed = false, showHelp = false;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -1094,6 +1115,43 @@ void processInput(GLFWwindow* window)
         keyPressed = false;
     }
 
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+        if (!keyPressed) {
+            std::cout << "H presionada - Ayuda: " << (showHelp ? "ACTIVADA" : "DESACTIVADA") << std::endl;
+            keyPressed = true;
+            showHelp = true;
+        }
+    }
+    else {
+        keyPressed = false;
+        showHelp = false;
+    }
+
+    if (showHelp) {
+        //glUseProgram(textShaderID);
+
+        std::string helpText =
+            "F1 - CAMARA FLOTANTE\n"
+            "F2 - CAMARA 3ERA PERSONA\n"
+            "F3 - CAMARA 1ERA PERSONA\n"
+            "C - MODO DEBUG\n"
+            "SHIFT - CORRER\n"
+            "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
+            "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
+            "H - MOSTRAR/OCULTAR AYUDA";
+
+        text.RenderText(helpText,
+            (float)SCR_WIDTH * 0.01f,
+            (float)SCR_HEIGHT * 0.9f,
+            0.4f,
+            glm::vec3(1.0f, 0.9f, 0.1f));
+    }
+
+
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_RELEASE) {
+        keyPressed = false;
+    }
+
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
         if (!character_run) {
             character_run = true;
@@ -1107,6 +1165,26 @@ void processInput(GLFWwindow* window)
             scaleV = walkSpeed;
             std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
         }
+    }
+    if (foundNearby) {
+        std::cout << "En Found Nearby";
+        glUseProgram(textShaderID);
+
+        std::string helpText =
+            "F1 - CAMARA FLOTANTE\n"
+            "F2 - CAMARA 3ERA PERSONA\n"
+            "F3 - CAMARA 1ERA PERSONA\n"
+            "C - MODO DEBUG\n"
+            "SHIFT - CORRER\n"
+            "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
+            "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
+            "H - MOSTRAR/OCULTAR AYUDA";
+
+        text.RenderText(helpText,
+            (float)SCR_WIDTH * 0.01f,
+            (float)SCR_HEIGHT * 0.9f,
+            0.4f,
+            glm::vec3(1.0f, 0.9f, 0.1f));
     }
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {

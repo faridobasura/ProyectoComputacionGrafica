@@ -4,3 +4,4 @@
 3.- C debug mode (colisiones)
 4.- S modifico include/cubemap.h
 5.- Se modificaron los shaders vertex_cubemap y fragment_cubemap
+6.-Se agrego la libreria para el texto freetype, asi como sus directorios de inclusion, etc, tambien sus shaders  y text_render.h
