@@ -917,14 +917,61 @@ void UpdateInteractionsWithCollision() {
 
 void InitializeCollidableObjects() {
 
-    // --- ¡¡IMPORTANTE!! AÑADIR CAJA(S) PARA EL MUSEO/PAREDES ---
-    // Esta es UNA sola caja de ejemplo. Necesitarás varias para rodear el museo.
-    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -150.0f),
-         AABB(glm::vec3(-50.0f, 0.0f, -1.0f),  // Una pared trasera de 100 de ancho
-              glm::vec3(50.0f, 20.0f, 1.0f)), // y 20 de alto
+    //Pared trasera 
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -117.0f),
+         AABB(glm::vec3(-70.0f, 0.0f, -0.2f),  // Una pared trasera de 100 de ancho
+              glm::vec3(50.0f, 20.0f, 0.2f)), 
          glm::vec3(1.0f), 0.0f
         });
-    // --- FIN DE EJEMPLO DE MUSEO ---
+    
+    //Pared izquierda_01
+    g_collidableObjects.push_back({ museo, glm::vec3(-32.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),  
+              glm::vec3(0.5f, 20.0f, 33.0f)), 
+         glm::vec3(1.0f), 0.0f
+        });
+    //Pared izquierda_02
+    g_collidableObjects.push_back({ museo, glm::vec3(-66.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-0.5f, 0.0f, -120.0f),  
+              glm::vec3(0.5f, 20.0f, -70.0f)), 
+         glm::vec3(1.0f), 0.0f
+        });
+    //Pared izquierda_03
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -68.0f),
+        AABB(glm::vec3(-66.0f, 0.0f, -0.5f),
+             glm::vec3(-30.0f, 20.0f, 0.5f)),
+        glm::vec3(1.0f), 0.0f
+           });
+    //Pared derecha_01
+    g_collidableObjects.push_back({ museo, glm::vec3(32.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),  
+              glm::vec3(0.5f, 20.0f, 33.0f)), 
+         glm::vec3(1.0f), 0.0f
+        });
+    //Pared derecha_02
+    g_collidableObjects.push_back({ museo, glm::vec3(66.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-0.5f, 0.0f, -115.0f),  
+              glm::vec3(0.5f, 20.0f, -70.0f)), 
+         glm::vec3(1.0f), 0.0f
+        });
+    //Pared derecha_03
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -68.0f),
+        AABB(glm::vec3(29.0f, 0.0f, -0.5f),
+             glm::vec3(66.0f, 20.0f, 0.5f)),
+        glm::vec3(1.0f), 0.0f
+        });
+    //Pared frontal_izq
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
+         AABB(glm::vec3(-32.0f, 0.0f, -0.5f),  
+              glm::vec3(-10.0f, 20.0f, 0.5f)), 
+         glm::vec3(1.0f), 0.0f
+        });
+    //Pared frontal_der
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
+         AABB(glm::vec3(10.0f, 0.0f, -0.5f),
+              glm::vec3(32.0f, 20.0f, 0.5f)),
+         glm::vec3(1.0f), 0.0f
+        });
 
     // --- AÑADIR ESTANTES (PERO NO EL PISO) ---
     // ¡Asegúrate de que los punteros 'estante1' y 'estante2' sean válidos!
@@ -985,6 +1032,16 @@ void InitializeCollidableObjects() {
                                     AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
                                          glm::vec3(2.0f, 8.0f, 2.0f)),
                                     glm::vec3(1.0f), 0.0f });
+
+    for (size_t i = 0; i < g_collidableObjects.size(); ++i) {
+        const auto& obj = g_collidableObjects[i];
+        std::cout << "Objeto " << i
+            << " en posición: "
+            << obj.position.x << ", "
+            << obj.position.y << ", "
+            << obj.position.z << std::endl;
+    }
+
 }
 
 
