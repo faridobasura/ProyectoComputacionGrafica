@@ -1087,10 +1087,8 @@ void processInput(GLFWwindow* window)
     }
 
     if (showHelp) {
-        glUseProgram(textShaderID);
-
         std::string helpText =
-            "\nF1 - CAMARA FLOTANTE\n"
+            "F1 - CAMARA FLOTANTE\n"
             "F2 - CAMARA 3ERA PERSONA\n"
             "F3 - CAMARA 1ERA PERSONA\n"
             "C - MODO DEBUG\n"
@@ -1100,9 +1098,6 @@ void processInput(GLFWwindow* window)
             "H - MOSTRAR/OCULTAR AYUDA";
 
         textManager.setHelpText(helpText);;
-    }
-    else {
-        glUseProgram(0);
     }
 
 
@@ -1149,12 +1144,10 @@ void processInput(GLFWwindow* window)
     }
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
-        g_f_keyPressed = false; // Reseteamos la bandera cuando se suelta
+        g_f_keyPressed = false; 
     }
-
     if (g_interactingObject != nullptr) {
-
-        textManager.setTextByWorld("\tY - Para rotar");
+        textManager.setTextByWorld("\n    Y - Para rotacion automatica");
 
         if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
             if (!g_y_keyPressed) {
@@ -1259,8 +1252,9 @@ void processInput(GLFWwindow* window)
     }
 
     if (foundNearby) {
-        textManager.setTextByWorld("F - Para interactuar");
+        textManager.setTextByWorld("        F - Para interactuar");
     }
+
 
 }
 // glfw: Actualizamos el puerto de vista si hay cambios del tamaño

@@ -12,10 +12,11 @@ class TextManager {
         bool isContext();
         bool setHelpText(const std::string& helpText);
         bool setTextByWorld(const std::string& text);
-        void clearTextArea(float x, float y, float scale, const std::string& text);
+        //void clearTextArea(float x, float y, float scale, const std::string& text);
         void setScreenSize(unsigned int width, unsigned int height);
+        void clearTextArea(float x, float y, float width, float height, const glm::vec3& bgColor);
     
-        unsigned int textShaderID;  // <-- Agregar esto
+        unsigned int textShaderID;  
     
     private:
         TextRenderer& textRenderer;

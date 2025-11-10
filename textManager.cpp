@@ -17,10 +17,15 @@ void TextManager::setScreenSize(unsigned int width, unsigned int height) {
     scrHeight = height;
 }
 
-void TextManager::clearTextArea(float x, float y, float scale, const std::string& text) {
-    // Implementación de limpieza: renderiza texto "vacío" (espacios) sobre el área previa
-    std::string clearStr(text.length(), ' ');
-    textRenderer.RenderText(clearStr, x, y, scale, glm::vec3(0.0f, 0.0f, 0.0f));
+void TextManager::clearTextArea(float x, float y, float width, float height, const glm::vec3& bgColor) {
+    glUseProgram(0); 
+    glBegin(GL_QUADS);
+    glColor3f(bgColor.r, bgColor.g, bgColor.b);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
 }
 
 bool TextManager::isContext() {
@@ -63,13 +68,22 @@ bool TextManager::setTextByWorld(const std::string& text) {
         float y = static_cast<float>(scrHeight) * 0.2f;
         float scale = 0.4f;
 
-        if (text != lastText && !lastText.empty()) {
-            clearTextArea(x, y, scale, lastText);
-        }
+        float textWidth = static_cast<float>(text.length()) * 20.0f * scale;
+        float textHeight = 40.0f * scale;
 
-        if (!text.empty()) {
-            textRenderer.RenderText(text, x, y, scale, glm::vec3(0.9f, 0.7f, 0.05f));
-        }
+        // Dibujar rectángulo semitransparente detrás del texto
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glUseProgram(textRenderer.shaderID); // o un shader de color simple
+        // Dibujar quad de fondo
+        glm::vec3 bgColor(0.0f, 0.0f, 0.0f); // negro
+        float alpha = 0.5f; // semitransparente
+
+        // Renderizar texto encima
+        textRenderer.RenderText(text, x, y, scale, glm::vec3(0.9f, 0.7f, 0.05f));
+
+        glDisable(GL_BLEND);
 
         lastText = text;
         return true;
