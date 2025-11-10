@@ -23,6 +23,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/compatibility.hpp> // <-- ¡ENCABEZADO NECESARIO PARA glm::lerp!
 
 // Model loading classes
 #include <shader_m.h>
@@ -34,7 +35,7 @@
 #include <cubemap.h>
 
 #include <irrKlang.h>
-#include <algorithm>
+#include <algorithm> 
 
 
 using namespace irrklang;
@@ -58,17 +59,17 @@ struct CollidableObject {
 };
 
 struct InteractiveObject {
-    Model* model;            
-    glm::vec3   position;         
-    float       triggerRadius;    
-    std::string name;             
+    Model* model;            // Puntero al modelo cargado
+    glm::vec3   position;         // Posición en el mundo
+    float       triggerRadius;    // Radio de cercanía
+    std::string name;             // Nombre para depuración
 
-    float       inspectRotationY; 
-    float       inspectRotationX; 
-    bool        isAutoRotatingY;  
+    float       inspectRotationY; // Rotación en Y (ahora automática)
+    float       inspectRotationX; // Rotación en X (ya no se usa, pero se queda para reset)
+    bool        isAutoRotatingY;  // Bandera para rotación automática
 
-    glm::vec3   inspectTargetOffset;
-    glm::vec3   inspectCamPos;       
+    glm::vec3   inspectTargetOffset; // Punto de mira (relativo a la posición del objeto)
+    glm::vec3   inspectCamPos;       // Posición de la cámara (relativa a la posición del objeto)
 
 
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
@@ -79,6 +80,28 @@ struct InteractiveObject {
     {
     }
 };
+
+// --- ¡NUEVO! STRUCT PARA LAS PUERTAS ---
+enum DoorState { CLOSED, OPENING, OPEN, CLOSING };
+
+struct Door {
+    Model* model;
+    glm::vec3   initialPosition; // Posición cerrada
+    glm::vec3   openPosition;    // Posición abierta
+    glm::vec3   currentPosition; // Posición actual
+    AABB        boundingBox;     // Caja de colisión local
+    float       triggerRadius;
+    DoorState   state;
+    float       animSpeed;
+    float       animProgress;    // 0.0 = cerrada, 1.0 = abierta
+
+    Door(Model* m, glm::vec3 closed, glm::vec3 open, float radius, AABB box) :
+        model(m), initialPosition(closed), openPosition(open), currentPosition(closed),
+        triggerRadius(radius), boundingBox(box), state(CLOSED), animSpeed(1.0f), animProgress(0.0f)
+    {
+    }
+};
+// --- FIN DE STRUCT ---
 
 // Functions
 bool Start();
@@ -109,10 +132,16 @@ InteractiveObject* g_nearbyObject = nullptr;      // Exhibición más cercana (p
 InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que estamos interactuando
 bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
 bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
-bool foundNearby = false;
+
+// --- ¡MODIFICADO! Variables de Puerta ---
+std::vector<Door> g_doors;           // Lista de todas las puertas
+bool g_isNearDoors = false;       // <-- Usamos una simple bandera
+bool g_e_keyPressed = false;      // Para la tecla "E" (Usar)
+// --- FIN DE MODIFICADO ---
+
 
 // --- VARIABLES CÁMARA DE INSPECCIÓN ---
-float g_inspectZoom = 45.0f; // --- ¡NUEVO! Variable para el zoom (inicia en 45 grados de FOV) ---
+float g_inspectZoom = 45.0f;
 
 TextRenderer text;
 
@@ -159,6 +188,7 @@ AABB characterBoundingBox;
 // Variables para debug de colisiones
 unsigned int debugVAO, debugVBO;
 bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
+bool showHelp = false; // Variable para mostrar/ocultar ayuda
 
 glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
@@ -175,8 +205,8 @@ glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 estante1Pos = glm::vec3(-29.181f, 0.0f, -22.93f); // Posición de ejemplo
-glm::vec3 estante2Pos = glm::vec3(28.64f, 0.0f, -12.3f); // Posición de ejemplo
+glm::vec3 estante1Pos = glm::vec3(-29.181f, 0.0f, -22.93f);
+glm::vec3 estante2Pos = glm::vec3(28.64f, 0.0f, -12.3f);
 
 
 Shader* mLightsShader;
@@ -186,15 +216,17 @@ Shader* debugShader;
 Shader* cubemapShader;
 Shader* dynamicShader;
 Shader* textShader;
+Shader* glassShader; // <-- ¡NUEVO!
 
 // Carga la información de los modelo
 Model* museo; // Entorno
 
-// --- AÑADIR PUNTEROS PARA OBJETOS NUEVOS ---
+// --- PUNTEROS PARA OBJETOS ---
 Model* piso;
 Model* EstanteIzquierda;
 Model* EstanteDerecha;
-// --- FIN DE AÑADIR ---
+Model* puertaModel; // <-- ¡NUEVO! (Unificado)
+// --- FIN DE PUNTEROS ---
 
 Model* Xiucoatl;
 Model* piramide;
@@ -207,7 +239,6 @@ Model* Xochipilli;
 Model* Bracero;
 
 // Modelos animados
-//AnimatedModel* character_ninia_normal;
 AnimatedModel* character01;
 
 // Cubemap
@@ -426,7 +457,8 @@ bool Start() {
     dynamicShader = new Shader("shaders/10_vertex_skinning-IT.vs", "shaders/10_fragment_skinning-IT.fs");
     debugShader = new Shader("shaders/shader_debug.vs", "shaders/shader_debug.fs");
     textShader = new Shader("shaders/text_shader.vs", "shaders/text_shader.fs");
-    
+    glassShader = new Shader("shaders/glass.vs", "shaders/glass.fs"); // <-- ¡NUEVO!
+
     textShaderID = textShader->ID;
 
     CreateDebugCube();
@@ -441,7 +473,10 @@ bool Start() {
     piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
     EstanteIzquierda = new Model("models/IllumModels/proyectofinal/EstanteIzquierda.fbx");
     EstanteDerecha = new Model("models/IllumModels/proyectofinal/EstanteDerecha.fbx");
-    // --- FIN DE AÑADIR ---
+
+    // --- ¡NUEVO! Cargar modelo de puerta (una vez) ---
+    puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx"); // <-- ¡Ajusta el nombre del archivo!
+    // --- FIN DE NUEVO ---
 
     Xiucoatl = new Model("models/IllumModels/estatua.fbx");
     piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
@@ -452,7 +487,6 @@ bool Start() {
     Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
     Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
-    //character_ninia_normal = new AnimatedModel("models/character_ninia.fbx");
     character01 = new AnimatedModel("models/character.fbx");
 
     // --- Configuración de cámaras de inspección ---
@@ -474,13 +508,11 @@ bool Start() {
         glm::vec3(-5.0f, 6.0f, 0.0f),  // Mirar al centro (1.5m)
         glm::vec3(16.0f, 6.0f, 0.0f)); // Pararse 4m a la IZQUIERDA (X negativo)
 
-    // Objeto: PlatoAntiguo - Vista superior (Top-Down)
     g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 4.0f, "PlatoAntiguo",
         glm::vec3(0.0f, 5.0f, 0.0f),  // Mirar justo encima del plato
         glm::vec3(0.0f, 6.0f, -7.0f)); // Pararse 3m ARRIBA, un poco enfrente
 
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 4.0f, "Craneo",
-
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f));
 
@@ -496,6 +528,34 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f));
     // --- Fin de Carga de modelos ---
+
+    // --- ¡MODIFICADO! Definir las puertas ---
+    // Basado en tu imagen, X: -5.1117, Y(Blender): -31.297 -> Z(OpenGL): 31.297
+
+    // 1. Define las posiciones CERRADAS
+    glm::vec3 puerta1_closedPos = glm::vec3(-5.0f, 0.0f, 31.297f);
+    glm::vec3 puerta2_closedPos = glm::vec3(5.0f, 0.0f, 31.297f); // Asumimos simetría
+
+    // 2. Define cuánto se deslizan (¡ajusta este valor!)
+    float slideDistance = 7.0f; // La puerta se moverá 4 unidades
+    glm::vec3 puerta1_openPos = puerta1_closedPos + glm::vec3(-slideDistance, 0.0f, 0.0f); // Se mueve a la izquierda
+    glm::vec3 puerta2_openPos = puerta2_closedPos + glm::vec3(slideDistance, 0.0f, 0.0f); // Se mueve a la derecha
+
+    // 3. Define la caja de colisión LOCAL (relativa al centro de la puerta)
+    // ¡¡AJUSTA ESTO SEGÚN EL TAMAÑO REAL DE TU 'puerta.fbx'!!
+    // Asumo que el modelo de la puerta tiene 10.22 de ancho total (5.1117 * 2 es demasiado)
+    // Asumamos que el *modelo* 'puerta.fbx' tiene 5 de ancho, 4 de alto, 0.4 de grosor
+    float puertaAncho = 10.0f;
+    float puertaAlto = 10.0f;
+    float puertaGrosor = 0.4f;
+    AABB puerta_box = AABB(glm::vec3(-puertaAncho / 2.0f, 0.0f, -puertaGrosor / 2.0f),
+        glm::vec3(puertaAncho / 2.0f, puertaAlto, puertaGrosor / 2.0f));
+
+    // 4. Añade las puertas a la lista
+    g_doors.emplace_back(puertaModel, puerta1_closedPos, puerta1_openPos, 6.0f, puerta_box);
+    g_doors.emplace_back(puertaModel, puerta2_closedPos, puerta2_openPos, 6.0f, puerta_box);
+    // --- FIN DE MODIFICACIÓN ---
+
 
     // Cubemap
     vector<std::string> faces
@@ -554,7 +614,7 @@ bool Start() {
         }
 
     }
-    
+
 
     InitializeCollidableObjects();
 
@@ -599,42 +659,61 @@ bool Update() {
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 
-
-    // Activamos para objetos transparentes
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     // Procesa la entrada del teclado o mouse
     processInput(window);
 
     // --- LÓGICA DE INTERACCIÓN (Proximidad) ---
     g_nearbyObject = nullptr; // Reiniciar cada frame
+    g_isNearDoors = false;   // --- ¡MODIFICADO! Reiniciar bandera
+    bool foundNearby_flag = false; // Bandera local para saber si se muestra *algún* texto
 
-    // SOLO si NO estamos interactuando, buscamos objetos cercanos
+    // 1. SOLO si NO estamos interactuando, buscamos objetos cercanos
     if (g_interactingObject == nullptr) {
 
         for (auto& obj : g_interactiveObjects) {
-
             float distance = glm::distance(character_position, obj.position);
-
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
-                foundNearby = true;
+                foundNearby_flag = true;
                 break; // Encontramos uno, dejamos de buscar
             }
         }
 
-        // --- LÓGICA DEL TEXTO (simulada en consola) ---
-        if (foundNearby) {
-            std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
-            text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-        }
-        else {
-            // Limpia la línea
-            std::cout << "                                                             \r";
+        // Si no encontramos un objeto F, buscar una puerta E
+        if (g_nearbyObject == nullptr) {
+            for (auto& door : g_doors) {
+                // Comprueba la distancia a la POSICIÓN CERRADA (o un punto medio)
+                float distance = glm::distance(character_position, door.initialPosition);
+                if (distance < door.triggerRadius) {
+                    g_isNearDoors = true; // --- ¡MODIFICADO!
+                    foundNearby_flag = true;
+                    break;
+                }
+            }
         }
     }
     // --- FIN DE LÓGICA DE INTERACCIÓN ---
+
+    // --- ¡NUEVO! LÓGICA DE ANIMACIÓN DE PUERTAS ---
+    for (auto& door : g_doors) {
+        if (door.state == OPENING) {
+            door.animProgress += door.animSpeed * deltaTime;
+            if (door.animProgress >= 1.0f) {
+                door.animProgress = 1.0f;
+                door.state = OPEN;
+            }
+            door.currentPosition = glm::lerp(door.initialPosition, door.openPosition, door.animProgress);
+        }
+        else if (door.state == CLOSING) {
+            door.animProgress -= door.animSpeed * deltaTime;
+            if (door.animProgress <= 0.0f) {
+                door.animProgress = 0.0f;
+                door.state = CLOSED;
+            }
+            door.currentPosition = glm::lerp(door.initialPosition, door.openPosition, door.animProgress);
+        }
+    }
+    // --- FIN DE LÓGICA DE PUERTAS ---
 
     // --- LÓGICA DE AUTO-ROTACIÓN ---
     if (g_interactingObject != nullptr && g_interactingObject->isAutoRotatingY) {
@@ -680,7 +759,7 @@ bool Update() {
         }
         else if (activeCamera == 2) {
             // Cámara en primera persona
-            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_HEIGHT, 0.1f, 200.0f);
+            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f); // <-- CORREGIDO
             view = camera1st.GetViewMatrix();
         }
 
@@ -691,7 +770,12 @@ bool Update() {
     {
         mainCubeMap->drawCubeMap(*cubemapShader, projection, view);
     }
+
+    // --- PASO 1: DIBUJAR TODOS LOS OBJETOS OPACOS ---
     {
+        glEnable(GL_DEPTH_TEST); // Asegurarse de que la prueba de profundidad esté activa
+        glDisable(GL_BLEND);     // Deshabilitar blending para objetos opacos
+
         mLightsShader->use();
         if (mLightsShader->ID != 0) {
 
@@ -722,8 +806,6 @@ bool Update() {
             else if (activeCamera == 2) {
                 mLightsShader->setVec3("eye", camera1st.Position);
             }
-            // --- FIN DE CORRECCIÓN ---
-
 
             // Aplicamos propiedades materiales
             mLightsShader->setVec4("MaterialAmbientColor", material01.ambient);
@@ -758,33 +840,20 @@ bool Update() {
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
             EstanteDerecha->Draw(*mLightsShader);
-            // --- FIN DE AÑADIR ---
 
-            // 2. Dibujar TODOS los objetos interactivos
+            // 2. Dibujar TODOS los objetos interactivos (OPacos)
             for (auto& obj : g_interactiveObjects) {
                 model = glm::mat4(1.0f);
-                // 1. Mover al lugar correcto
                 model = glm::translate(model, obj.position);
-
-                // Aplicamos las rotaciones de inspección guardadas en el objeto
-                // 2. Rotar en Y (controlado por auto-rotación)
                 model = glm::rotate(model, obj.inspectRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
-                // 3. Rotar en X (ya no se usa)
                 model = glm::rotate(model, obj.inspectRotationX, glm::vec3(1.0f, 0.0f, 0.0f));
-                // --- FIN DE NUEVA LÓGICA ---
-
-                // 4. Aplicar rotación base de FBX (la que tenías)
                 model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
                 mLightsShader->setMat4("model", model);
-                obj.model->Draw(*mLightsShader); // Dibuja el modelo del objeto
+                obj.model->Draw(*mLightsShader);
             }
-            // --- FIN DE BUCLE DE DIBUJADO ---
         }
-
-        glUseProgram(0);
-
     }
+
     //Dibujo de cajas para debug
     if (showCollisionBoxes) {
         if (!debugShader || debugShader->ID == 0) {
@@ -792,60 +861,137 @@ bool Update() {
             showCollisionBoxes = false;
         }
         else {
-            // Solo dibujar si el shader está listo
             for (const auto& obj : g_collidableObjects) {
                 AABB worldAABB = CalculateWorldAABB(obj);
                 DrawBoundingBox(worldAABB, glm::vec3(1.0f, 0.0f, 0.0f), projection, view);
             }
-
+            for (auto& door : g_doors) {
+                AABB worldDoorBox;
+                worldDoorBox.min = door.currentPosition + door.boundingBox.min;
+                worldDoorBox.max = door.currentPosition + door.boundingBox.max;
+                DrawBoundingBox(worldDoorBox, glm::vec3(1.0f, 0.0f, 1.0f), projection, view);
+            }
             AABB charAABB = GetCharacterBoundingBox();
             DrawBoundingBox(charAABB, glm::vec3(0.0f, 1.0f, 0.0f), projection, view);
-
             for (const auto& obj : g_interactiveObjects) {
                 AABB triggerBox;
                 triggerBox.min = obj.position - glm::vec3(obj.triggerRadius, 0.1f, obj.triggerRadius);
                 triggerBox.max = obj.position + glm::vec3(obj.triggerRadius, 2.0f, obj.triggerRadius);
                 DrawBoundingBox(triggerBox, glm::vec3(0.0f, 0.0f, 1.0f), projection, view);
-                DrawLightDebug(projection, view);
             }
+            for (const auto& door : g_doors) {
+                AABB triggerBox;
+                triggerBox.min = door.initialPosition - glm::vec3(door.triggerRadius, 0.1f, door.triggerRadius);
+                triggerBox.max = door.initialPosition + glm::vec3(door.triggerRadius, 2.0f, door.triggerRadius);
+                DrawBoundingBox(triggerBox, glm::vec3(0.0f, 1.0f, 1.0f), projection, view);
+            }
+            DrawLightDebug(projection, view);
         }
     }
 
     // Objeto animado
-    // --- DIBUJAR PERSONAJE SOLO SI NO ESTÁ EN 1RA PERSONA ---
     if (activeCamera != 2)
     {
-        //character_ninia_normal->UpdateAnimation(deltaTime);
         character01->UpdateAnimation(deltaTime);
-        // Activación del shader del personaje
         dynamicShader->use();
-
-        // Aplicamos transformaciones de proyección y cámara (si las hubiera)
         dynamicShader->setMat4("projection", projection);
         dynamicShader->setMat4("view", view);
-
-        // Aplicamos transformaciones del modelo
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, character_position); // translate it down so it's at the center of the scene
+        model = glm::translate(model, character_position);
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
-
-        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));  // it's a bit too big for our scene, so scale it down
-
+        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
         dynamicShader->setMat4("model", model);
-
-        //dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character_ninia_normal->gBones);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
-
-        // Dibujamos el modelo
-        //character_ninia_normal->Draw(*dynamicShader);
         character01->Draw(*dynamicShader);
     }
+
+    // --- ¡NUEVO! DIBUJAR OBJETOS TRANSPARENTES (VIDRIO) ---
+    // (Debe ir DESPUÉS del personaje y ANTES del texto)
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glassShader->use();
+        glassShader->setMat4("projection", projection);
+        glassShader->setMat4("view", view);
+
+        // Configurar posición del ojo para el shader de vidrio
+        if (g_interactingObject != nullptr) {
+            glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
+            glassShader->setVec3("eye", camPos);
+        }
+        else if (activeCamera == 0) {
+            glassShader->setVec3("eye", camera_float.Position);
+        }
+        else if (activeCamera == 1) {
+            glassShader->setVec3("eye", camera3rd.Position);
+        }
+        else if (activeCamera == 2) {
+            glassShader->setVec3("eye", camera1st.Position);
+        }
+
+        // ¡IMPORTANTE! Bindear la textura del Cubemap
+        glActiveTexture(GL_TEXTURE0);
+        glassShader->setInt("skybox", 0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, mainCubeMap->textureID);
+
+        glassShader->setFloat("transparency", 0.4f); // <-- Ajusta la transparencia aquí
+
+        // Dibujar las puertas
+        for (auto& door : g_doors) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, door.currentPosition); // <-- Usa la posición actual
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            glassShader->setMat4("model", model);
+            door.model->Draw(*glassShader);
+        }
+    }
+    // --- FIN DEL BLOQUE DE VIDRIO ---
 
 
     glUseProgram(0);
 
-    text.RenderText(" \n F1 - CAMARA FLOTANTE \n F2 - CAMARA 3ERA PERSONA \n F3 - CAMARA 1ERA PERSONA \n C - MODO DEBUG \n SHIFT - CORRER \n FLECHAS - DESPLAZARTE (PERSONAJE) \n WASD - DESPLAZARTE(CAMARA FLOTANTE)", (float)SCR_WIDTH * 0.01f, (float)SCR_HEIGHT * 1.0f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-    text.RenderText("Presiona F para abrir", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+    // --- PASO 3: DIBUJAR LA INTERFAZ 2D (TEXTO) ---
+    // (Debe ir AL FINAL de todo el dibujado, antes de SwapBuffers)
+    {
+        // --- ¡LA SOLUCIÓN ESTÁ AQUÍ! ---
+        glDisable(GL_DEPTH_TEST); // Deshabilitar prueba de profundidad
+        glEnable(GL_BLEND);       // Habilitar blending para el texto
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // --- FIN DE LA SOLUCIÓN ---
+
+        if (showHelp) {
+            std::string helpText =
+                "F1 - CAMARA FLOTANTE\n"
+                "F2 - CAMARA 3ERA PERSONA\n"
+                "F3 - CAMARA 1ERA PERSONA\n"
+                "C - MODO DEBUG\n"
+                "SHIFT - CORRER\n"
+                "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
+                "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
+                "H - MOSTRAR/OCULTAR AYUDA";
+
+            text.RenderText(helpText,
+                (float)SCR_WIDTH * 0.01f,
+                (float)SCR_HEIGHT * 0.9f, // Arriba
+                0.4f,
+                glm::vec3(1.0f, 0.9f, 0.1f));
+        }
+
+        if (g_nearbyObject != nullptr) {
+            text.RenderText("Presiona F para inspeccionar", (float)SCR_WIDTH * 0.40f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+        }
+        else if (g_isNearDoors) { // <-- ¡MODIFICADO!
+            text.RenderText("Presiona E para usar", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+        }
+
+        // --- ¡IMPORTANTE! Restaurar estado ---
+        glEnable(GL_DEPTH_TEST); // Volver a habilitar la profundidad para el próximo frame
+        glDisable(GL_BLEND); // Deshabilitar blend
+        // --- FIN DE RESTAURAR ---
+    }
+    // --- FIN DE LÓGICA DE TEXTO ---
+
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cout << "OpenGL Error: " << err << std::endl;
@@ -867,12 +1013,8 @@ bool CheckCollision(const AABB& a, const AABB& b) {
     bool collision = collisionX && collisionY && collisionZ;
 
     if (collision) {
-        std::cout << "=== COLISIÓN DETECTADA ===" << std::endl;
-        std::cout << "Eje X: " << (collisionX ? "SÍ" : "NO") << std::endl;
-        std::cout << "Eje Y: " << (collisionY ? "SÍ" : "NO") << std::endl;
-        std::cout << "Eje Z: " << (collisionZ ? "SÍ" : "NO") << std::endl;
-        std::cout << "Personaje - Min: (" << a.min.x << ", " << a.min.z << ") Max: (" << a.max.x << ", " << a.max.z << ")" << std::endl;
-        std::cout << "Objeto    - Min: (" << b.min.x << ", " << b.min.z << ") Max: (" << b.max.x << ", " << b.max.z << ")" << std::endl;
+        // Comentado para reducir spam
+        // std::cout << "=== COLISIÓN DETECTADA ===" << std::endl;
     }
 
     return collision;
@@ -896,16 +1038,25 @@ bool CheckCharacterCollision() {
 
     AABB charAABB = GetCharacterBoundingBox();
 
+    // Comprobar colisiones con objetos estáticos
     for (int i = 0; i < g_collidableObjects.size(); i++) {
         AABB objAABB = CalculateWorldAABB(g_collidableObjects[i]);
-        bool collision = CheckCollision(charAABB, objAABB);
-
-
-        if (collision) {
+        if (CheckCollision(charAABB, objAABB)) {
             return true;
         }
-
     }
+
+    // --- ¡NUEVO! Comprobar colisiones con puertas dinámicas ---
+    for (auto& door : g_doors) {
+        AABB worldDoorBox;
+        worldDoorBox.min = door.currentPosition + door.boundingBox.min;
+        worldDoorBox.max = door.currentPosition + door.boundingBox.max;
+        if (CheckCollision(charAABB, worldDoorBox)) {
+            return true;
+        }
+    }
+    // --- FIN DE NUEVO ---
+
     return false;
 }
 bool CheckCollisionAtPosition(const glm::vec3& position) {
@@ -920,39 +1071,28 @@ bool CheckCollisionAtPosition(const glm::vec3& position) {
 }
 
 static void UpdateInteractionsWithCollision() {
-    g_nearbyObject = nullptr;
-
-    if (g_interactingObject == nullptr) {
-        for (auto& obj : g_interactiveObjects) {
-            float distance = glm::distance(character_position, obj.position);
-            if (distance < obj.triggerRadius) {
-                g_nearbyObject = &obj;
-                std::cout << "Presiona F para interactuar. Presiona Y para rotar.    \r";
-                break;
-            }
-        }
-    }
+    // Esta función ya no se usa, la lógica está en Update()
 }
 
 void InitializeCollidableObjects() {
 
     //Pared trasera 
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -117.0f),
-         AABB(glm::vec3(-70.0f, 0.0f, -0.2f),  // Una pared trasera de 100 de ancho
-              glm::vec3(50.0f, 20.0f, 0.2f)), 
+         AABB(glm::vec3(-70.0f, 0.0f, -0.2f),
+               glm::vec3(50.0f, 20.0f, 0.2f)),
          glm::vec3(1.0f), 0.0f
         });
-    
+
     //Pared izquierda_01
     g_collidableObjects.push_back({ museo, glm::vec3(-32.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),  
-              glm::vec3(0.5f, 20.0f, 33.0f)), 
+         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),
+               glm::vec3(0.5f, 20.0f, 33.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //Pared izquierda_02
     g_collidableObjects.push_back({ museo, glm::vec3(-66.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-0.5f, 0.0f, -120.0f),  
-              glm::vec3(0.5f, 20.0f, -70.0f)), 
+         AABB(glm::vec3(-0.5f, 0.0f, -120.0f),
+               glm::vec3(0.5f, 20.0f, -70.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //Pared izquierda_03
@@ -960,17 +1100,17 @@ void InitializeCollidableObjects() {
         AABB(glm::vec3(-66.0f, 0.0f, -0.5f),
              glm::vec3(-30.0f, 20.0f, 0.5f)),
         glm::vec3(1.0f), 0.0f
-           });
+        });
     //Pared derecha_01
     g_collidableObjects.push_back({ museo, glm::vec3(32.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),  
-              glm::vec3(0.5f, 20.0f, 33.0f)), 
+         AABB(glm::vec3(-0.5f, 0.0f, -70.0f),
+               glm::vec3(0.5f, 20.0f, 33.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //Pared derecha_02
     g_collidableObjects.push_back({ museo, glm::vec3(66.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-0.5f, 0.0f, -115.0f),  
-              glm::vec3(0.5f, 20.0f, -70.0f)), 
+         AABB(glm::vec3(-0.5f, 0.0f, -115.0f),
+               glm::vec3(0.5f, 20.0f, -70.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //Pared derecha_03
@@ -981,85 +1121,88 @@ void InitializeCollidableObjects() {
         });
     //Pared frontal_izq
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
-         AABB(glm::vec3(-32.0f, 0.0f, -0.5f),  
-              glm::vec3(-10.0f, 20.0f, 0.5f)), 
+         AABB(glm::vec3(-32.0f, 0.0f, -0.5f),
+               glm::vec3(-10.0f, 20.0f, 0.5f)),
          glm::vec3(1.0f), 0.0f
         });
     //Pared frontal_der
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
          AABB(glm::vec3(10.0f, 0.0f, -0.5f),
-              glm::vec3(32.0f, 20.0f, 0.5f)),
+               glm::vec3(32.0f, 20.0f, 0.5f)),
          glm::vec3(1.0f), 0.0f
         });
 
     // --- AÑADIR ESTANTES (PERO NO EL PISO) ---
-    // ¡Asegúrate de que los punteros 'estante1' y 'estante2' sean válidos!
     g_collidableObjects.push_back({ EstanteIzquierda, estante1Pos,
-                                    AABB(glm::vec3(-2.0f, 0.0f, -4.0f), // Caja de ejemplo
-                                         glm::vec3(2.0f, 7.0f, 4.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-2.0f, 0.0f, -4.0f), // Caja de ejemplo
+                                          glm::vec3(2.0f, 7.0f, 4.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ EstanteDerecha, estante2Pos,
-                                    AABB(glm::vec3(-4.0f, 0.0f, -7.0f), 
-                                         glm::vec3(4.0f, 7.0f, 7.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-4.0f, 0.0f, -7.0f),
+                                          glm::vec3(4.0f, 7.0f, 7.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     // Estatuas y objetos interactivos (esto ya estaba bien)
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
-                                    AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
-                                         glm::vec3(4.5f, 8.0f, 4.5f)),   // max (x, y, z),     // ← Más pequeño
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-4.5f, 0.0f, -4.5f),
+                                          glm::vec3(4.5f, 8.0f, 4.5f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ piramide, piramidePos,
-                                    AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
-                                         glm::vec3(4.0f, 4.0f, 4.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
+                                          glm::vec3(4.0f, 4.0f, 4.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
-                                    AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
-                                         glm::vec3(13.0f, 10.0f, 17.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
+                                          glm::vec3(13.0f, 10.0f, 17.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
-                                    AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
-                                         glm::vec3(2.8f, 15.0f, 3.5f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-3.5f, 0.0f, -3.5f),
+                                          glm::vec3(2.8f, 15.0f, 3.5f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ PlatoAntiguo, PlatoAntiguoPos,
-                                    AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
-                                         glm::vec3(1.8f, 5.0f, 2.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-1.8f, 0.0f, -2.0f),
+                                          glm::vec3(1.8f, 5.0f, 2.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Craneo, CraneoPos,
-                                    AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
-                                         glm::vec3(1.0f, 5.0f, 1.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-1.0f, 0.0f, -1.0f),
+                                          glm::vec3(1.0f, 5.0f, 1.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Incenciario, IncenciarioPos,
-                                    AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
-                                         glm::vec3(3.0f, 8.0f, 3.3f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-3.0f, 0.0f, -3.0f),
+                                          glm::vec3(3.0f, 8.0f, 3.3f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Xochipilli, XochipilliPos,
-                                    AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
-                                         glm::vec3(1.5f, 8.0f, 2.5f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-2.0f, 0.0f, -1.5f),
+                                          glm::vec3(1.5f, 8.0f, 2.5f)),
+                                     glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Bracero, BraceroPos,
-                                    AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
-                                         glm::vec3(2.0f, 8.0f, 2.0f)),
-                                    glm::vec3(1.0f), 0.0f });
+                                     AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
+                                          glm::vec3(2.0f, 8.0f, 2.0f)),
+                                     glm::vec3(1.0f), 0.0f });
 
 }
 
 
+// --- ¡¡FUNCIÓN 'processInput' CORREGIDA!! ---
 void processInput(GLFWwindow* window)
 {
-    static bool f1Pressed = false, f2Pressed = false, f3Pressed = false, keyPressed = false, showHelp = false;
+    static bool f1Pressed = false, f2Pressed = false, f3Pressed = false;
+    static bool c_keyPressed = false; // Tecla para 'C'
+    static bool h_keyPressed = false; // Tecla para 'H'
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // --- Controles de cámara flotante (F1) ---
     if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
         if (character_run == true) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -1072,7 +1215,7 @@ void processInput(GLFWwindow* window)
                 camera_float.ProcessKeyboard(RIGHT, deltaTime * 4.0f);
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
                 camera_float.ProcessKeyboard(UP, deltaTime * 4.0f);
-            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) // La 'E' solo mueve la cámara flotante
                 camera_float.ProcessKeyboard(DOWN, deltaTime * 4.0f);
         }
         else {
@@ -1086,10 +1229,11 @@ void processInput(GLFWwindow* window)
                 camera_float.ProcessKeyboard(RIGHT, deltaTime);
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
                 camera_float.ProcessKeyboard(UP, deltaTime);
-            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) // La 'E' solo mueve la cámara flotante
                 camera_float.ProcessKeyboard(DOWN, deltaTime);
         }
     }
+    // --- Fin controles cámara flotante ---
 
 
     if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
@@ -1100,7 +1244,7 @@ void processInput(GLFWwindow* window)
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        if (!keyPressed) {
+        if (!c_keyPressed) {
             showCollisionBoxes = !showCollisionBoxes;
             if (showCollisionBoxes && (!debugShader || debugShader->ID == 0)) {
                 std::cout << "No se puede activar debug - shader no disponible" << std::endl;
@@ -1108,49 +1252,24 @@ void processInput(GLFWwindow* window)
             else {
                 std::cout << "Debug colisiones: " << (showCollisionBoxes ? "ACTIVADO" : "DESACTIVADO") << std::endl;
             }
-            keyPressed = true;
+            c_keyPressed = true;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_RELEASE) {
-        keyPressed = false;
+        c_keyPressed = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
-        if (!keyPressed) {
-            std::cout << "H presionada - Ayuda: " << (showHelp ? "ACTIVADA" : "DESACTIVADA") << std::endl;
-            keyPressed = true;
-            showHelp = true;
+        if (!h_keyPressed) {
+            showHelp = !showHelp; // Alterna la ayuda
+            h_keyPressed = true;
+            std::cout << "Ayuda: " << (showHelp ? "ACTIVADA" : "DESACTIVADA") << std::endl;
         }
     }
-    else {
-        keyPressed = false;
-        showHelp = false;
-    }
-
-    if (showHelp) {
-        //glUseProgram(textShaderID);
-
-        std::string helpText =
-            "F1 - CAMARA FLOTANTE\n"
-            "F2 - CAMARA 3ERA PERSONA\n"
-            "F3 - CAMARA 1ERA PERSONA\n"
-            "C - MODO DEBUG\n"
-            "SHIFT - CORRER\n"
-            "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
-            "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
-            "H - MOSTRAR/OCULTAR AYUDA";
-
-        text.RenderText(helpText,
-            (float)SCR_WIDTH * 0.01f,
-            (float)SCR_HEIGHT * 0.9f,
-            0.4f,
-            glm::vec3(1.0f, 0.9f, 0.1f));
-    }
-
-
     if (glfwGetKey(window, GLFW_KEY_H) == GLFW_RELEASE) {
-        keyPressed = false;
+        h_keyPressed = false;
     }
+
 
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
         if (!character_run) {
@@ -1166,30 +1285,11 @@ void processInput(GLFWwindow* window)
             std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
         }
     }
-    if (foundNearby) {
-        std::cout << "En Found Nearby";
-        glUseProgram(textShaderID);
-
-        std::string helpText =
-            "F1 - CAMARA FLOTANTE\n"
-            "F2 - CAMARA 3ERA PERSONA\n"
-            "F3 - CAMARA 1ERA PERSONA\n"
-            "C - MODO DEBUG\n"
-            "SHIFT - CORRER\n"
-            "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
-            "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
-            "H - MOSTRAR/OCULTAR AYUDA";
-
-        text.RenderText(helpText,
-            (float)SCR_WIDTH * 0.01f,
-            (float)SCR_HEIGHT * 0.9f,
-            0.4f,
-            glm::vec3(1.0f, 0.9f, 0.1f));
-    }
 
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         if (!g_f_keyPressed) {
 
+            // CASO 1: Empezar a interactuar
             if (g_interactingObject == nullptr && g_nearbyObject != nullptr) {
                 g_interactingObject = g_nearbyObject;
                 g_nearbyObject = nullptr;
@@ -1198,6 +1298,7 @@ void processInput(GLFWwindow* window)
 
                 g_inspectZoom = 45.0f;
             }
+            // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
 
                 // Reseteamos el estado del objeto a su original al salir
@@ -1214,6 +1315,44 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
         g_f_keyPressed = false; // Reseteamos la bandera cuando se suelta
     }
+
+    // --- ¡MODIFICADO! Lógica para tecla 'E' (Usar Puerta) ---
+    // (Solo si no estamos en modo flotante)
+    if (activeCamera != 0 && glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        if (!g_e_keyPressed && g_isNearDoors) { // <-- Comprueba la bandera
+            g_e_keyPressed = true;
+
+            // Determina el estado objetivo (si una está cerrada, ábrelas todas, si no, ciérralas todas)
+            DoorState targetState = OPENING;
+            // Comprueba el estado de la PRIMERA puerta para decidir qué hacer
+            if (g_doors.size() > 0 && (g_doors[0].state == OPEN || g_doors[0].state == OPENING)) {
+                targetState = CLOSING;
+            }
+
+            // Aplica el estado a TODAS las puertas
+            for (auto& door : g_doors) {
+                if (targetState == OPENING && door.state == CLOSED) {
+                    door.state = OPENING;
+                }
+                else if (targetState == CLOSING && door.state == OPEN) {
+                    door.state = CLOSING;
+                }
+            }
+
+            // Toca el sonido una vez
+            if (targetState == OPENING) {
+                // SoundEngine->play2D("sound/door_open.wav"); 
+            }
+            else {
+                // SoundEngine->play2D("sound/door_close.wav");
+            }
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+        g_e_keyPressed = false;
+    }
+    // --- FIN DE MODIFICADO ---
+
 
     if (g_interactingObject != nullptr && glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         if (!g_y_keyPressed) {
@@ -1241,6 +1380,7 @@ void processInput(GLFWwindow* window)
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
+                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
                 UpdateCameras();
             }
@@ -1257,6 +1397,7 @@ void processInput(GLFWwindow* window)
             glm::vec3 oldPosition = character_position;
 
             if (!CheckCollisionAtPosition(newPosition)) {
+                // camera3rd.ProcessKeyboard(FORWARD, deltaTime); // <-- ¡ELIMINADA!
                 character_position = newPosition;
                 UpdateCameras();
             }
@@ -1352,7 +1493,10 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     // SI ESTAMOS EN MODO NORMAL
     else
     {
-        camera_float.ProcessMouseMovement(xoffset, yoffset);
+        // Solo controla la cámara flotante
+        if (activeCamera == 0) {
+            camera_float.ProcessMouseMovement(xoffset, yoffset);
+        }
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
@@ -1364,7 +1508,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     // SI ESTAMOS EN MODO INSPECCIÓN
     if (g_interactingObject != nullptr)
     {
-        // --- ¡CAMBIO AQUÍ! ---
         // El scroll ahora controla el FOV (zoom)
         g_inspectZoom -= (float)yoffset;
         if (g_inspectZoom < 1.0f)
@@ -1375,7 +1518,10 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     // SI ESTAMOS EN MODO NORMAL
     else
     {
-        camera_float.ProcessMouseScroll((float)yoffset);
+        // Solo controla la cámara flotante
+        if (activeCamera == 0) {
+            camera_float.ProcessMouseScroll((float)yoffset);
+        }
     }
     // --- FIN DE LÓGICA MODIFICADA ---
 }
