@@ -165,18 +165,28 @@ glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 // --- POSICIONES DE OBJETOS ---
 glm::vec3 estatuaPos = position_origin;
 glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
-glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.6f);
+glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.3f);
 glm::vec3 CoatlicuePos = glm::vec3(-47.55f, 0.0f, -95.0f);
 glm::vec3 PlatoAntiguoPos = glm::vec3(-41.6f, -0.7f, -71.74f);
 glm::vec3 CraneoPos = glm::vec3(-25.39f, -1.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
-glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.5f);
+glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.0f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 estante1Pos = glm::vec3(-29.181f, 0.0f, -22.93f); // Posición de ejemplo
-glm::vec3 estante2Pos = glm::vec3(28.64f, 0.0f, -12.3f); // Posición de ejemplo
+glm::vec3 estante1Pos = glm::vec3(28.64f, 0.0f, -12.3f);
+glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -22.93f); 
+glm::vec3 estante3Pos = glm::vec3(14.64f, 0.0f, -42.3f);
+glm::vec3 estante4Pos = glm::vec3(-15.181f, 0.0f, -42.93f);
+glm::vec3 estante5Pos = glm::vec3(60.0f, 0.0f, -80.93f);
+glm::vec3 estante6Pos = glm::vec3(0.0f, 0.0f, -115.3f);
+glm::vec3 estante7Pos = glm::vec3(-60.64f, 0.0f, -80.93f);
 
+glm::vec3 paredes_estantesPos = glm::vec3(0.0f, 0.0f, -45.00f);
+
+glm::vec3 caracolPos = glm::vec3(-20.0f, 0.0f, -40.00f);
+
+glm::vec3 cuadroPos = glm::vec3(26.0f, 0.0f, -40.00f);
 
 Shader* mLightsShader;
 Shader* proceduralShader;
@@ -191,8 +201,16 @@ Model* museo; // Entorno
 
 // --- AÑADIR PUNTEROS PARA OBJETOS NUEVOS ---
 Model* piso;
-Model* EstanteIzquierda;
-Model* EstanteDerecha;
+Model* estante1;
+Model* estante2;
+Model* estante3;
+Model* estante4;
+Model* estante5;
+Model* estante6;
+Model* estante7;
+
+Model* paredes_estantes;
+
 // --- FIN DE AÑADIR ---
 
 Model* Xiucoatl;
@@ -204,6 +222,8 @@ Model* Craneo;
 Model* Incenciario;
 Model* Xochipilli;
 Model* Bracero;
+Model* caracol;
+Model* cuadro;
 
 // Modelos animados
 //AnimatedModel* character_ninia_normal;
@@ -439,21 +459,27 @@ bool Start() {
         return -1;
     }
 
-    CreateDebugCube();
-
     // Máximo número de huesos: 100
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
     // --- Carga de modelos modulares ---
-    museo = new Model("models/IllumModels/proyectofinal/Entorno.fbx");
+    museo = new Model("models/IllumModels/proyectofinal/estructura_con_bases.fbx");
 
     // --- AÑADIR CARGA DE MODELOS ---
     piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
-    EstanteIzquierda = new Model("models/IllumModels/proyectofinal/EstanteIzquierda.fbx");
-    EstanteDerecha = new Model("models/IllumModels/proyectofinal/EstanteDerecha.fbx");
+
+    estante1 = new Model("models/IllumModels/proyectofinal/estante1.fbx");
+    estante2 = new Model("models/IllumModels/proyectofinal/estante2.fbx");
+    estante3 = new Model("models/IllumModels/proyectofinal/estante3.fbx");
+    estante4 = new Model("models/IllumModels/proyectofinal/estante4.fbx");
+    estante5 = new Model("models/IllumModels/proyectofinal/estante5.fbx");
+    estante6 = new Model("models/IllumModels/proyectofinal/estante6.fbx");
+    estante7 = new Model("models/IllumModels/proyectofinal/estante7.fbx");
+
+    paredes_estantes = new Model("models/IllumModels/proyectofinal/paredes_estantes.fbx"); 
     // --- FIN DE AÑADIR ---
 
-    Xiucoatl = new Model("models/IllumModels/estatua.fbx");
+    Xiucoatl = new Model("models/IllumModels/proyectofinal/xiucoatl.fbx");
     piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
     PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
     Coatlicue = new Model("models/IllumModels/proyectofinal/Coatlicue.fbx");
@@ -464,6 +490,9 @@ bool Start() {
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
     //character_ninia_normal = new AnimatedModel("models/character_ninia.fbx");
     character01 = new AnimatedModel("models/character.fbx");
+
+    caracol = new Model("models/IllumModels/proyectofinal/caracol.fbx");
+    cuadro = new Model("models/IllumModels/proyectofinal/cuadro.fbx");
 
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
@@ -506,6 +535,8 @@ bool Start() {
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f));
     // --- Fin de Carga de modelos ---
+
+    CreateDebugCube();
 
     // Cubemap
     vector<std::string> faces
@@ -735,14 +766,64 @@ bool Update() {
             model = glm::translate(model, estante1Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
-            EstanteIzquierda->Draw(*mLightsShader);
+            estante1->Draw(*mLightsShader);
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante2Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
-            EstanteDerecha->Draw(*mLightsShader);
+            estante2->Draw(*mLightsShader);
 
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante3Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            estante3->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante4Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            estante4->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante5Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            estante5->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante6Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            estante6->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, estante7Pos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            estante7->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, paredes_estantesPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            paredes_estantes->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, cuadroPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            cuadro->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, caracolPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            caracol->Draw(*mLightsShader);
+
+           
             //Objetos Interactivos
             for (auto& obj : g_interactiveObjects) {
                 model = glm::mat4(1.0f);
@@ -955,15 +1036,16 @@ void InitializeCollidableObjects() {
         });
 
     // --- AÑADIR ESTANTES (PERO NO EL PISO) ---
-    g_collidableObjects.push_back({ EstanteIzquierda, estante1Pos,
-                                    AABB(glm::vec3(-2.0f, 0.0f, -4.0f), // Caja de ejemplo
-                                         glm::vec3(2.0f, 7.0f, 4.0f)),
-                                    glm::vec3(1.0f), 0.0f });
-
-    g_collidableObjects.push_back({ EstanteDerecha, estante2Pos,
-                                    AABB(glm::vec3(-4.0f, 0.0f, -7.0f), 
+    g_collidableObjects.push_back({ estante1, estante1Pos,
+                                    AABB(glm::vec3(-2.0f, 0.0f, -7.0f), // Caja de ejemplo
                                          glm::vec3(4.0f, 7.0f, 7.0f)),
                                     glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ estante2, estante2Pos,
+                                    AABB(glm::vec3(-4.0f, 0.0f, -4.0f), 
+                                         glm::vec3(4.0f, 7.0f, 4.0f)),
+                                    glm::vec3(1.0f), 0.0f });
+
 
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
                                     AABB(glm::vec3(-4.5f, 0.0f, -4.5f),   // min (x, y, z)
@@ -1109,14 +1191,12 @@ void processInput(GLFWwindow* window)
         if (!character_run) {
             character_run = true;
             scaleV = runSpeed;
-            std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
         if (character_run) {
             character_run = false;
             scaleV = walkSpeed;
-            std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
         }
     }
 
