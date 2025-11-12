@@ -899,7 +899,7 @@ bool Update() {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, character_position);
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+        model = glm::scale(model, glm::vec3(0.004f, 0.004f, 0.004f));
         dynamicShader->setMat4("model", model);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
         character01->Draw(*dynamicShader);
