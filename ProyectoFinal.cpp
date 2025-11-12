@@ -487,7 +487,7 @@ bool Start() {
     Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
     Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
-    character01 = new AnimatedModel("models/character.fbx");
+    character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje1.fbx");
 
     // --- Configuración de cámaras de inspección ---
     // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
@@ -560,12 +560,12 @@ bool Start() {
     // Cubemap
     vector<std::string> faces
     {
-        "textures/skybox_night/posx.png",
-        "textures/skybox_night/negx.png",
-        "textures/skybox_night/posy.png",
-        "textures/skybox_night/negy.png",
-        "textures/skybox_night/posz.png",
-        "textures/skybox_night/negz.png"
+        "textures/cubemap/01/posx.jpg",
+        "textures/cubemap/01/negx.jpg",
+        "textures/cubemap/01/posy.jpg",
+        "textures/cubemap/01/negy.jpg",
+        "textures/cubemap/01/posz.jpg",
+        "textures/cubemap/01/negz.jpg"
     };
     mainCubeMap = new CubeMap();
     mainCubeMap->loadCubemap(faces);
