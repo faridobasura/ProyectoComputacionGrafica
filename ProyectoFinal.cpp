@@ -175,18 +175,18 @@ glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 estante1Pos = glm::vec3(28.64f, 0.0f, -12.3f);
-glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -22.93f); 
-glm::vec3 estante3Pos = glm::vec3(14.64f, 0.0f, -42.3f);
-glm::vec3 estante4Pos = glm::vec3(-15.181f, 0.0f, -42.93f);
-glm::vec3 estante5Pos = glm::vec3(60.0f, 0.0f, -80.93f);
-glm::vec3 estante6Pos = glm::vec3(0.0f, 0.0f, -115.3f);
+glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -14.0f); 
+glm::vec3 estante3Pos = glm::vec3(19.64f, 0.0f, -42.3f);
+glm::vec3 estante4Pos = glm::vec3(-19.181f, 0.0f, -42.93f);
+glm::vec3 estante5Pos = glm::vec3(65.0f, 0.0f, -105.93f);
+glm::vec3 estante6Pos = glm::vec3(4.0f, 0.0f, -115.3f);
 glm::vec3 estante7Pos = glm::vec3(-60.64f, 0.0f, -80.93f);
 
 glm::vec3 paredes_estantesPos = glm::vec3(0.0f, 0.0f, -45.00f);
 
-glm::vec3 caracolPos = glm::vec3(-20.0f, 0.0f, -40.00f);
+glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 
-glm::vec3 cuadroPos = glm::vec3(26.0f, 0.0f, -40.00f);
+glm::vec3 cuadroPos = glm::vec3(-65.0f, 2.0f, -107.00f);
 
 Shader* mLightsShader;
 Shader* proceduralShader;
@@ -812,8 +812,9 @@ bool Update() {
 
             model = glm::mat4(1.0f);
             model = glm::translate(model, cuadroPos);
+            model = glm::scale(model, glm::vec3(3.0f, 3.5f, 3.0f));
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
             mLightsShader->setMat4("model", model);
             cuadro->Draw(*mLightsShader);
 
