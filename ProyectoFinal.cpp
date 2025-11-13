@@ -475,7 +475,7 @@ bool Start() {
     EstanteDerecha = new Model("models/IllumModels/proyectofinal/EstanteDerecha.fbx");
 
     // --- ¡NUEVO! Cargar modelo de puerta (una vez) ---
-    puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx"); // <-- ¡Ajusta el nombre del archivo!
+    puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx"); 
     // --- FIN DE NUEVO ---
 
     Xiucoatl = new Model("models/IllumModels/estatua.fbx");
