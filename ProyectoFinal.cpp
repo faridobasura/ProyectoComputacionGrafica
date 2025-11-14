@@ -272,15 +272,15 @@ Model* infoStandModel; // <-- ¡NUEVO!
 
 // --- ¡NUEVO! Punteros para tus 10 objetos ---
 Model* CuadroInformativo1;
-Model* objetoEstatico2;
-Model* objetoEstatico3;
-Model* objetoEstatico4;
-Model* objetoEstatico5;
-Model* objetoEstatico6;
-Model* objetoEstatico7;
-Model* objetoEstatico8;
-Model* objetoEstatico9;
-Model* objetoEstatico10;
+Model* CuadroCraneo;
+Model* CuadroPiramide;
+Model* CuadroPlato;
+Model* CuadroCoatlicue;
+Model* CuadroPiedra;
+Model* CuadroXochipilli;
+Model* CuadroIncenciario;
+Model* CuadroBracero;
+
 // --- FIN DE NUEVO ---
 
 Model* Xiucoatl;
@@ -539,7 +539,7 @@ bool Start() {
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
     // --- Carga de modelos modulares ---
-    museo = new Model("models/IllumModels/proyectofinal/estructura_con_bases.fbx");
+    museo = new Model("models/IllumModels/proyectofinal/Entorno1.fbx");
     piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
     puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
 
@@ -560,24 +560,15 @@ bool Start() {
     // --- ¡NUEVO! Cargar tus 10 modelos estáticos ---
     // (Usa los modelos existentes como placeholders, cámbialos por tus archivos .fbx)
     CuadroInformativo1 = new Model("models/IllumModels/proyectofinal/CuadroInformativo.fbx"); // ¡CAMBIAR!
-    objetoEstatico2 = new Model("models/IllumModels/proyectofinal/Crano.fbx");  // ¡CAMBIAR!
-    objetoEstatico3 = new Model("models/IllumModels/proyectofinal/Braero.fbx"); // ¡CAMBIAR!
-    objetoEstatico4 = new Model("models/IllumModels/proyectofinal/Crneo.fbx");  // ¡CAMBIAR!
-    objetoEstatico5 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
-    objetoEstatico6 = new Model("models/IllumModels/proyectofinal/raneo.fbx");  // ¡CAMBIAR!
-    objetoEstatico7 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
-    objetoEstatico8 = new Model("models/IllumModels/proyectofinal/Caneo.fbx");  // ¡CAMBIAR!
-    objetoEstatico9 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
-    objetoEstatico10 = new Model("models/IllumModels/proyectofinal/Caneo.fbx"); // ¡CAMBIAR!
-    // --- FIN DE NUEVO ---
-
-    // --- ¡NUEVO! Cargar modelo de letrero (uno o varios) ---
-    // (Carga el modelo de letrero genérico)
-    Model* letrero_generico = new Model("models/IllumModels/proyectofinal/letrero_generico.fbx"); // ¡CAMBIA ESTO!
-    // (Si tienes letreros específicos, cárgalos también)
-    // Model* letrero_xiucoatl = new Model("models/IllumModels/proyectofinal/letrero_xiucoatl.fbx");
-    // Model* letrero_piramide = new Model("models/IllumModels/proyectofinal/letrero_piramide.fbx");
-    // --- FIN DE NUEVO ---
+    CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx");  // ¡CAMBIAR!
+    CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx"); // ¡CAMBIAR!
+    CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");  // ¡CAMBIAR!
+    CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx"); // ¡CAMBIAR!
+    CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");  // ¡CAMBIAR!
+    CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx"); // ¡CAMBIAR!
+    CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");  // ¡CAMBIAR!
+    CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx"); // ¡CAMBIAR!
+    
 
     // Modelos Interactivos
     Xiucoatl = new Model("models/IllumModels/proyectofinal/xiucoatl.fbx");
@@ -589,7 +580,7 @@ bool Start() {
     Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
     Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
-    character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje1.fbx");
+    character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje2.fbx");
 
     // --- ¡MODIFICADO! Configuración de cámaras de inspección ---
     // Formato: (Modelo, Pos, Radio, Nombre, 
@@ -600,19 +591,19 @@ bool Start() {
     g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua",
         glm::vec3(0.0f, 5.0f, 1.0f),  // Target Objeto
         glm::vec3(0.0f, 5.0f, 11.0f), // CamPos Objeto
-        letrero_generico,             // ¡Modelo de letrero! (Cambia si es específico)
-        glm::vec3(4.0f, 0.0f, 2.0f),  // Posición del letrero (relativa a la estatua) ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),  // Target Letrero (relativo al letrero)
-        glm::vec3(0.0f, 1.0f, 2.5f)   // CamPos Letrero (relativo al letrero)
+        CuadroPiedra,             // ¡Modelo de letrero! (Cambia si es específico)
+        glm::vec3(5.0f, 0.0f, 3.0f),  // Posición del letrero (relativa a la estatua) ¡AJUSTA ESTO!
+        glm::vec3(-5.0f, 3.5f, 0.0f),  // Target Letrero (relativo al letrero)
+        glm::vec3(7.0f, 4.0f, 0.0f)   // CamPos Letrero (relativo al letrero)
     );
 
     g_interactiveObjects.emplace_back(piramide, piramidePos, 6.0f, "Piramides",
         glm::vec3(0.0f, 3.0f, 0.0f),
         glm::vec3(0.0f, 5.0f, 12.0f),
-        letrero_generico,
-        glm::vec3(-4.0f, 0.0f, 3.0f),  // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        CuadroPiramide,
+        glm::vec3(6.0f, 0.0f, 3.0f),  // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(-5.0f, 4.0f, 0.0f),
+        glm::vec3(8.0f, 4.0f, 0.0f)
     );
 
     g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 19.0f, "PiedraSol",
@@ -627,55 +618,55 @@ bool Start() {
     g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 4.0f, "Coatlicue",
         glm::vec3(-5.0f, 6.0f, 0.0f),
         glm::vec3(16.0f, 6.0f, 0.0f),
-        letrero_generico,
-        glm::vec3(0.0f, 0.0f, 4.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        CuadroCoatlicue,
+        glm::vec3(1.0f, 0.0f, 6.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(-5.0f, 3.5f, 0.0f),
+        glm::vec3(8.0f, 4.0f, 0.0f)
     );
 
     g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 4.0f, "PlatoAntiguo",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, -7.0f),
-        letrero_generico,
-        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        CuadroPlato,
+        glm::vec3(4.0f, 2.0f, 1.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 3.5f, 0.0f),
+        glm::vec3(0.0f, 4.0f, -8.0f)
     );
 
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 4.0f, "Craneo",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f),
-        letrero_generico,
-        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        CuadroCraneo,
+        glm::vec3(-3.5f, 2.5f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 3.5f, 0.0f),
+        glm::vec3(0.0f, 4.0f, 5.0f)
     );
 
-    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 4.0f, "Incenciario",
+    g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 5.0f, "Incenciario",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(3.0f, 6.0f, 8.0f),
-        letrero_generico,
-        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        glm::vec3(0.0f, 6.0f, 8.0f),
+        CuadroIncenciario,
+        glm::vec3(5.5f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 3.5f, 0.0f),
+        glm::vec3(0.0f, 4.0f, 8.0f)
     );
 
-    g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 4.0f, "Xochipilli",
+    g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 5.0f, "Xochipilli",
         glm::vec3(5.0f, 5.0f, 0.0f),
-        glm::vec3(-15.0f, 6.0f, 0.0f),
-        letrero_generico,
-        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        glm::vec3(-8.0f, 6.0f, 0.0f),
+        CuadroXochipilli,
+        glm::vec3(-1.5f, 0.0f, 4.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(5.0f, 3.5f, 0.0f),
+        glm::vec3(-7.0f, 4.0f, 0.0f)
     );
 
     g_interactiveObjects.emplace_back(Bracero, BraceroPos, 6.0f, "Bracero",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(0.0f, 6.0f, -7.0f),
-        letrero_generico,
-        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 2.5f)
+        glm::vec3(0.0f, 5.0f, -7.0f),
+        CuadroBracero,
+        glm::vec3(4.5f, 0.0f, -2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 3.5f, 0.0f),
+        glm::vec3(0.0f, 4.0f, -7.0f)
     );
     // --- Fin de Carga de modelos ---
 
@@ -1080,7 +1071,7 @@ bool Update() {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, character_position);
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.004f, 0.004f, 0.004f));
+        model = glm::scale(model, glm::vec3(0.0095f, 0.0095f, 0.0095f));
         dynamicShader->setMat4("model", model);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
         character01->Draw(*dynamicShader);
@@ -1178,6 +1169,7 @@ bool Update() {
                 // --- ¡¡ESTE ES EL TEXTO QUE PEDISTE CAMBIAR!! ---
                 textRenderer.RenderText("Presiona G para leer descripcion de objeto.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
                 textRenderer.RenderText("Presiona F para salir.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.15f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+                textRenderer.RenderText("Presiona Y para rotar.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.1f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
             }
         }
         else if (g_nearbyObject != nullptr) {
