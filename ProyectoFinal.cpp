@@ -59,6 +59,7 @@ struct CollidableObject {
     float rotationY;
 };
 
+// --- ¡STRUCT MODIFICADO! ---
 struct InteractiveObject {
     Model* model;
     glm::vec3   position;
@@ -69,18 +70,31 @@ struct InteractiveObject {
     float       inspectRotationX;
     bool        isAutoRotatingY;
 
-    glm::vec3   inspectTargetOffset;
-    glm::vec3   inspectCamPos;
+    // Cámara para el objeto principal
+    glm::vec3   mainInspectTargetOffset;
+    glm::vec3   mainInspectCamPos;
+
+    // Info para el letrero
+    Model* infoStandModel;
+    glm::vec3   infoStandPos; // Posición RELATIVA al objeto principal
+    glm::vec3   infoInspectTargetOffset; // Objetivo de cámara RELATIVO al letrero
+    glm::vec3   infoInspectCamPos;       // Posición de cámara RELATIVA al letrero
 
 
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
-        glm::vec3 targetOffset, glm::vec3 camPos) :
+        glm::vec3 mainTargetOffset, glm::vec3 mainCamPos,
+        Model* infoModel, glm::vec3 infoPos,
+        glm::vec3 infoTargetOffset, glm::vec3 infoCamPos) :
+
         model(m), position(pos), triggerRadius(radius), name(n),
         inspectRotationY(0.0f), inspectRotationX(0.0f), isAutoRotatingY(false),
-        inspectTargetOffset(targetOffset), inspectCamPos(camPos)
+        mainInspectTargetOffset(mainTargetOffset), mainInspectCamPos(mainCamPos),
+        infoStandModel(infoModel), infoStandPos(infoPos),
+        infoInspectTargetOffset(infoTargetOffset), infoInspectCamPos(infoCamPos)
     {
     }
 };
+// --- FIN DE STRUCT ---
 
 // --- ¡NUEVO! STRUCT PARA LAS PUERTAS ---
 enum DoorState { CLOSED, OPENING, OPEN, CLOSING };
@@ -139,6 +153,11 @@ std::vector<Door> g_doors;           // Lista de todas las puertas
 bool g_isNearDoors = false;       // <-- Usamos una simple bandera
 bool g_e_keyPressed = false;      // Para la tecla "E" (Usar)
 // --- FIN DE MODIFICADO ---
+
+// --- ¡NUEVO! Variables de Inspección ---
+bool g_isInspectingInfoStand = false; // ¿Estamos viendo el letrero?
+bool g_g_keyPressed = false;          // Para la tecla 'G'
+// --- FIN DE NUEVO ---
 
 
 // --- VARIABLES CÁMARA DE INSPECCIÓN ---
@@ -221,6 +240,9 @@ glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 
 glm::vec3 cuadroPos = glm::vec3(-65.0f, 2.0f, -107.00f);
 
+
+
+
 Shader* mLightsShader;
 Shader* proceduralShader;
 Shader* wavesShader;
@@ -235,8 +257,8 @@ Model* museo; // Entorno
 
 // --- PUNTEROS PARA OBJETOS ---
 Model* piso;
-Model* estante1; // (EstanteDerecha en tu código anterior)
-Model* estante2; // (EstanteIzquierda en tu código anterior)
+Model* estante1;
+Model* estante2;
 Model* estante3;
 Model* estante4;
 Model* estante5;
@@ -246,7 +268,20 @@ Model* estante7;
 Model* paredes_estantes;
 
 Model* puertaModel;
-// --- FIN DE PUNTEROS ---
+Model* infoStandModel; // <-- ¡NUEVO!
+
+// --- ¡NUEVO! Punteros para tus 10 objetos ---
+Model* CuadroInformativo1;
+Model* objetoEstatico2;
+Model* objetoEstatico3;
+Model* objetoEstatico4;
+Model* objetoEstatico5;
+Model* objetoEstatico6;
+Model* objetoEstatico7;
+Model* objetoEstatico8;
+Model* objetoEstatico9;
+Model* objetoEstatico10;
+// --- FIN DE NUEVO ---
 
 Model* Xiucoatl;
 Model* piramide;
@@ -522,6 +557,28 @@ bool Start() {
     caracol = new Model("models/IllumModels/proyectofinal/caracol.fbx");
     cuadro = new Model("models/IllumModels/proyectofinal/cuadro.fbx");
 
+    // --- ¡NUEVO! Cargar tus 10 modelos estáticos ---
+    // (Usa los modelos existentes como placeholders, cámbialos por tus archivos .fbx)
+    CuadroInformativo1 = new Model("models/IllumModels/proyectofinal/CuadroInformativo.fbx"); // ¡CAMBIAR!
+    objetoEstatico2 = new Model("models/IllumModels/proyectofinal/Crano.fbx");  // ¡CAMBIAR!
+    objetoEstatico3 = new Model("models/IllumModels/proyectofinal/Braero.fbx"); // ¡CAMBIAR!
+    objetoEstatico4 = new Model("models/IllumModels/proyectofinal/Crneo.fbx");  // ¡CAMBIAR!
+    objetoEstatico5 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
+    objetoEstatico6 = new Model("models/IllumModels/proyectofinal/raneo.fbx");  // ¡CAMBIAR!
+    objetoEstatico7 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
+    objetoEstatico8 = new Model("models/IllumModels/proyectofinal/Caneo.fbx");  // ¡CAMBIAR!
+    objetoEstatico9 = new Model("models/IllumModels/proyectofinal/Bacero.fbx"); // ¡CAMBIAR!
+    objetoEstatico10 = new Model("models/IllumModels/proyectofinal/Caneo.fbx"); // ¡CAMBIAR!
+    // --- FIN DE NUEVO ---
+
+    // --- ¡NUEVO! Cargar modelo de letrero (uno o varios) ---
+    // (Carga el modelo de letrero genérico)
+    Model* letrero_generico = new Model("models/IllumModels/proyectofinal/letrero_generico.fbx"); // ¡CAMBIA ESTO!
+    // (Si tienes letreros específicos, cárgalos también)
+    // Model* letrero_xiucoatl = new Model("models/IllumModels/proyectofinal/letrero_xiucoatl.fbx");
+    // Model* letrero_piramide = new Model("models/IllumModels/proyectofinal/letrero_piramide.fbx");
+    // --- FIN DE NUEVO ---
+
     // Modelos Interactivos
     Xiucoatl = new Model("models/IllumModels/proyectofinal/xiucoatl.fbx");
     piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
@@ -534,44 +591,92 @@ bool Start() {
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
     character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje1.fbx");
 
-    // --- Configuración de cámaras de inspección ---
-    // Formato: (Modelo, Posición, RadioTrigger, Nombre, OffsetObjetivo, OffsetCámara)
+    // --- ¡MODIFICADO! Configuración de cámaras de inspección ---
+    // Formato: (Modelo, Pos, Radio, Nombre, 
+    //           TargetObj, CamPosObj,         <-- Cámara para el objeto
+    //           ModeloLetrero, PosLetrero,    <-- Modelo y Posición del letrero
+    //           TargetLetrero, CamPosLetrero) <-- Cámara para el letrero
 
     g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua",
-        glm::vec3(0.0f, 5.0f, 1.0f),
-        glm::vec3(0.0f, 5.0f, 11.0f));
+        glm::vec3(0.0f, 5.0f, 1.0f),  // Target Objeto
+        glm::vec3(0.0f, 5.0f, 11.0f), // CamPos Objeto
+        letrero_generico,             // ¡Modelo de letrero! (Cambia si es específico)
+        glm::vec3(4.0f, 0.0f, 2.0f),  // Posición del letrero (relativa a la estatua) ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),  // Target Letrero (relativo al letrero)
+        glm::vec3(0.0f, 1.0f, 2.5f)   // CamPos Letrero (relativo al letrero)
+    );
 
     g_interactiveObjects.emplace_back(piramide, piramidePos, 6.0f, "Piramides",
-        glm::vec3(0.0f, 3.0f, 0.0f),  // Mirar 1m arriba
-        glm::vec3(0.0f, 5.0f, 12.0f)); // Pararse 2m arriba, 5m enfrente
+        glm::vec3(0.0f, 3.0f, 0.0f),
+        glm::vec3(0.0f, 5.0f, 12.0f),
+        letrero_generico,
+        glm::vec3(-4.0f, 0.0f, 3.0f),  // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 19.0f, "PiedraSol",
-        glm::vec3(0.0f, 7.0f, 0.0f),  // Mirar al centro (1.5m)
-        glm::vec3(0.0f, 7.0f, 15.0f)); // Pararse 3m enfrente
+        glm::vec3(0.0f, 7.0f, 0.0f),
+        glm::vec3(0.0f, 7.0f, 15.0f),
+        CuadroInformativo1,
+        glm::vec3(-9.32f, -0.16f, 16.0), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 4.0f, 0.0f),
+        glm::vec3(0.0f, 5.0f, 7.0f)
+    );
 
     g_interactiveObjects.emplace_back(Coatlicue, CoatlicuePos, 4.0f, "Coatlicue",
-        glm::vec3(-5.0f, 6.0f, 0.0f),  // Mirar al centro (1.5m)
-        glm::vec3(16.0f, 6.0f, 0.0f)); // Pararse 4m a la IZQUIERDA (X negativo)
+        glm::vec3(-5.0f, 6.0f, 0.0f),
+        glm::vec3(16.0f, 6.0f, 0.0f),
+        letrero_generico,
+        glm::vec3(0.0f, 0.0f, 4.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(PlatoAntiguo, PlatoAntiguoPos, 4.0f, "PlatoAntiguo",
-        glm::vec3(0.0f, 5.0f, 0.0f),  // Mirar justo encima del plato
-        glm::vec3(0.0f, 6.0f, -7.0f)); // Pararse 3m ARRIBA, un poco enfrente
+        glm::vec3(0.0f, 5.0f, 0.0f),
+        glm::vec3(0.0f, 6.0f, -7.0f),
+        letrero_generico,
+        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 4.0f, "Craneo",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(0.0f, 6.0f, 3.0f));
+        glm::vec3(0.0f, 6.0f, 3.0f),
+        letrero_generico,
+        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(Incenciario, IncenciarioPos, 4.0f, "Incenciario",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(3.0f, 6.0f, 8.0f));
+        glm::vec3(3.0f, 6.0f, 8.0f),
+        letrero_generico,
+        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(Xochipilli, XochipilliPos, 4.0f, "Xochipilli",
         glm::vec3(5.0f, 5.0f, 0.0f),
-        glm::vec3(-15.0f, 6.0f, 0.0f));
+        glm::vec3(-15.0f, 6.0f, 0.0f),
+        letrero_generico,
+        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
 
     g_interactiveObjects.emplace_back(Bracero, BraceroPos, 6.0f, "Bracero",
         glm::vec3(0.0f, 5.0f, 0.0f),
-        glm::vec3(0.0f, 6.0f, -7.0f));
+        glm::vec3(0.0f, 6.0f, -7.0f),
+        letrero_generico,
+        glm::vec3(3.0f, 0.0f, 2.0f), // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 2.5f)
+    );
     // --- Fin de Carga de modelos ---
 
     // --- ¡MODIFICADO! Definir las puertas ---
@@ -689,7 +794,7 @@ bool Update() {
     lastFrame = currentFrame;
 
     // Procesa la entrada del teclado o mouse
-    processInput(window); // <-- MOVIDO AL FINAL
+    processInput(window); // <-- MOVIDO AL INICIO
 
     // --- LÓGICA DE INTERACCIÓN (Proximidad) ---
     g_nearbyObject = nullptr; // Reiniciar cada frame
@@ -700,6 +805,7 @@ bool Update() {
     if (g_interactingObject == nullptr) {
 
         for (auto& obj : g_interactiveObjects) {
+            // --- ¡¡CORREGIDO!! Usa la posición del personaje ---
             float distance = glm::distance(character_position, obj.position);
             if (distance < obj.triggerRadius) {
                 g_nearbyObject = &obj;
@@ -761,16 +867,27 @@ bool Update() {
     // SI ESTAMOS EN MODO INSPECCIÓN (CÁMARA FIJA)
     if (g_interactingObject != nullptr)
     {
-        // 1. Definimos el centro del objetivo usando el offset del objeto
-        glm::vec3 targetCenter = g_interactingObject->position + g_interactingObject->inspectTargetOffset;
+        // --- ¡MODIFICADO! Comprueba si vemos el letrero o el objeto ---
+        glm::vec3 targetCenter;
+        glm::vec3 camPos;
 
-        // 2. Posicionamos la cámara usando el offset de cámara del objeto
-        glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
+        if (g_isInspectingInfoStand) {
+            // --- Focus en el Letrero ---
+            // 1. Calcula la pos absoluta del letrero
+            glm::vec3 standPos = g_interactingObject->position + g_interactingObject->infoStandPos;
+            // 2. Calcula el objetivo de la cámara
+            targetCenter = standPos + g_interactingObject->infoInspectTargetOffset;
+            // 3. Calcula la pos de la cámara
+            camPos = standPos + g_interactingObject->infoInspectCamPos;
+        }
+        else {
+            // --- Focus en el Objeto Principal ---
+            targetCenter = g_interactingObject->position + g_interactingObject->mainInspectTargetOffset;
+            camPos = g_interactingObject->position + g_interactingObject->mainInspectCamPos;
+        }
+        // --- FIN DE MODIFICACIÓN ---
 
-        // 3. La cámara mira al 'targetCenter'
         view = glm::lookAt(camPos, targetCenter, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        // 4. Usamos g_inspectZoom (controlado por el scroll) para la proyección
         projection = glm::perspective(glm::radians(g_inspectZoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
     }
     // SI ESTAMOS EN MODO NORMAL (explorando)
@@ -823,8 +940,17 @@ bool Update() {
             }
 
             if (g_interactingObject != nullptr) {
-                glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
+                // --- ¡MODIFICADO! Usa la cámara correcta ---
+                glm::vec3 camPos;
+                if (g_isInspectingInfoStand) {
+                    glm::vec3 standPos = g_interactingObject->position + g_interactingObject->infoStandPos;
+                    camPos = standPos + g_interactingObject->infoInspectCamPos;
+                }
+                else {
+                    camPos = g_interactingObject->position + g_interactingObject->mainInspectCamPos;
+                }
                 mLightsShader->setVec3("eye", camPos);
+                // --- FIN DE MODIFICACIÓN ---
             }
             else if (activeCamera == 0) {
                 mLightsShader->setVec3("eye", camera_float.Position);
@@ -861,14 +987,14 @@ bool Update() {
             model = glm::translate(model, estante1Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
-            estante1->Draw(*mLightsShader); // <-- CORREGIDO (era EstanteIzquierda)
+            estante1->Draw(*mLightsShader);
 
             // Dibujar ESTANTE 2
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante2Pos);
             model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             mLightsShader->setMat4("model", model);
-            estante2->Draw(*mLightsShader); // <-- CORREGIDO (era EstanteDerecha)
+            estante2->Draw(*mLightsShader);
 
             // --- ¡NUEVO! DIBUJAR OBJETOS ESTÁTICOS ---
             model = glm::mat4(1.0f); model = glm::translate(model, estante3Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante3->Draw(*mLightsShader);
@@ -880,10 +1006,12 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, paredes_estantesPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); paredes_estantes->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, caracolPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); caracol->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, cuadroPos); model = glm::scale(model, glm::vec3(3.0f, 3.5f, 3.0f)); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); cuadro->Draw(*mLightsShader);
-            // --- FIN DE NUEVO ---
+
+           
 
             // 2. Dibujar TODOS los objetos interactivos (OPacos)
             for (auto& obj : g_interactiveObjects) {
+                // Dibuja el objeto principal
                 model = glm::mat4(1.0f);
                 model = glm::translate(model, obj.position);
                 model = glm::rotate(model, obj.inspectRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -891,6 +1019,18 @@ bool Update() {
                 model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
                 mLightsShader->setMat4("model", model);
                 obj.model->Draw(*mLightsShader);
+
+                // --- ¡NUEVO! Dibuja el letrero asociado ---
+                if (obj.infoStandModel != nullptr) {
+                    model = glm::mat4(1.0f);
+                    model = glm::translate(model, obj.position + obj.infoStandPos); // Posición absoluta
+                    // (Añade rotación para el letrero si es necesario)
+                    // model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
+                    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    mLightsShader->setMat4("model", model);
+                    obj.infoStandModel->Draw(*mLightsShader);
+                }
+                // --- FIN DE NUEVO ---
             }
         }
     }
@@ -958,8 +1098,17 @@ bool Update() {
 
         // Configurar posición del ojo para el shader de vidrio
         if (g_interactingObject != nullptr) {
-            glm::vec3 camPos = g_interactingObject->position + g_interactingObject->inspectCamPos;
+            // --- ¡MODIFICADO! Usa la cámara correcta ---
+            glm::vec3 camPos;
+            if (g_isInspectingInfoStand) {
+                glm::vec3 standPos = g_interactingObject->position + g_interactingObject->infoStandPos;
+                camPos = standPos + g_interactingObject->infoInspectCamPos;
+            }
+            else {
+                camPos = g_interactingObject->position + g_interactingObject->mainInspectCamPos;
+            }
             glassShader->setVec3("eye", camPos);
+            // --- FIN DE MODIFICACIÓN ---
         }
         else if (activeCamera == 0) {
             glassShader->setVec3("eye", camera_float.Position);
@@ -1019,10 +1168,22 @@ bool Update() {
                 glm::vec3(1.0f, 0.9f, 0.1f));
         }
 
-        if (g_nearbyObject != nullptr) {
+        if (g_interactingObject != nullptr) {
+            // --- ¡MODIFICADO! Lógica de texto de inspección ---
+            if (g_isInspectingInfoStand) {
+                textRenderer.RenderText("Presiona G para volver al objeto.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+                textRenderer.RenderText("Presiona F para salir.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.15f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+            }
+            else {
+                // --- ¡¡ESTE ES EL TEXTO QUE PEDISTE CAMBIAR!! ---
+                textRenderer.RenderText("Presiona G para leer descripcion de objeto.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+                textRenderer.RenderText("Presiona F para salir.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.15f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+            }
+        }
+        else if (g_nearbyObject != nullptr) {
             textRenderer.RenderText("Presiona F para inspeccionar", (float)SCR_WIDTH * 0.40f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
         }
-        else if (g_isNearDoors) { // <-- ¡MODIFICADO!
+        else if (g_isNearDoors) {
             textRenderer.RenderText("Presiona E para usar", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
         }
 
@@ -1042,8 +1203,7 @@ bool Update() {
     glfwSwapBuffers(window);
     glfwPollEvents();
 
-    // Mover processInput al final del bucle
-    processInput(window);
+    // processInput(window); // <-- Eliminado de aquí, ya se llama al inicio de Update()
 
 
     return true;
@@ -1209,7 +1369,6 @@ void InitializeCollidableObjects() {
                                      AABB(glm::vec3(-3.0f, 0.0f, -4.0f),
                                           glm::vec3(3.0f, 9.0f, 4.0f)),
                                      glm::vec3(1.0f), 0.0f });
-
     g_collidableObjects.push_back({ caracol, caracolPos,
                                      AABB(glm::vec3(-1.0f, 0.0f, -1.0f), // Caja de ejemplo
                                           glm::vec3(1.0f, 5.0f, 1.0f)),
@@ -1219,7 +1378,8 @@ void InitializeCollidableObjects() {
                                      AABB(glm::vec3(-2.0f, 0.0f, -3.0f), // Caja de ejemplo
                                           glm::vec3(2.0f, 8.0f, 3.0f)),
                                      glm::vec3(1.0f), 0.0f });
-    // --- FIN DE LO QUE FALTABA ---
+
+   
 
 
     // --- OBJETOS INTERACTIVOS ---
@@ -1235,7 +1395,7 @@ void InitializeCollidableObjects() {
 
     g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
                                      AABB(glm::vec3(-13.0f, 0.0f, -2.5f),
-                                          glm::vec3(13.0f, 10.0f, 16.0f)),
+                                          glm::vec3(13.0f, 10.0f, 17.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ Coatlicue, CoatlicuePos,
@@ -1354,14 +1514,14 @@ void processInput(GLFWwindow* window)
         if (!character_run) {
             character_run = true;
             scaleV = runSpeed;
-            std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl;
+            // std::cout << "Modo CARRERA activado - Velocidad: " << scaleV << std::endl; // Reducir spam
         }
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
         if (character_run) {
             character_run = false;
             scaleV = walkSpeed;
-            std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl;
+            // std::cout << "Modo CAMINATA activado - Velocidad: " << scaleV << std::endl; // Reducir spam
         }
     }
 
@@ -1373,9 +1533,10 @@ void processInput(GLFWwindow* window)
                 g_interactingObject = g_nearbyObject;
                 g_nearbyObject = nullptr;
                 std::cout << "                                                      \r";
-                std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona Y para rotar/detener.\n";
+                std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona G para info.\n";
 
                 g_inspectZoom = 45.0f;
+                g_isInspectingInfoStand = false; // <-- ¡NUEVO! Resetear estado
             }
             // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
@@ -1386,6 +1547,7 @@ void processInput(GLFWwindow* window)
                 g_interactingObject->isAutoRotatingY = false; // Detenemos la rotación
 
                 g_interactingObject = nullptr;
+                g_isInspectingInfoStand = false; // <-- ¡NUEVO! Resetear estado
             }
         }
         g_f_keyPressed = true; // Marcamos que la tecla está presionada
@@ -1432,6 +1594,21 @@ void processInput(GLFWwindow* window)
     }
     // --- FIN DE MODIFICADO ---
 
+    // --- ¡NUEVO! Lógica para tecla 'G' (Cambiar Foco) ---
+    if (g_interactingObject != nullptr && glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+        if (!g_g_keyPressed) {
+            g_isInspectingInfoStand = !g_isInspectingInfoStand; // Alterna
+            g_g_keyPressed = true;
+
+            // Resetea el zoom al cambiar de vista
+            g_inspectZoom = 45.0f;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_RELEASE) {
+        g_g_keyPressed = false;
+    }
+    // --- FIN DE NUEVO ---
+
 
     if (g_interactingObject != nullptr && glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         if (!g_y_keyPressed) {
@@ -1464,7 +1641,7 @@ void processInput(GLFWwindow* window)
                 UpdateCameras();
             }
             else {
-                std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
+                // std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl; // Reducir spam
                 character_position = oldPosition;
                 UpdateCameras();
             }
@@ -1481,7 +1658,7 @@ void processInput(GLFWwindow* window)
                 UpdateCameras();
             }
             else {
-                std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl;
+                // std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl; // Reducir spam
                 character_position = oldPosition;
                 UpdateCameras();
             }
