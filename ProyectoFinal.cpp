@@ -229,6 +229,9 @@ glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.0f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 pisoExteriorPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 pisoPastoPos = glm::vec3(0.0f, 0.0f, 0.0f);
+
 glm::vec3 estante1Pos = glm::vec3(28.64f, 0.0f, -12.3f);
 glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -14.0f);
 glm::vec3 estante3Pos = glm::vec3(19.64f, 0.0f, -42.3f);
@@ -260,6 +263,9 @@ Model* museo; // Entorno
 
 // --- PUNTEROS PARA OBJETOS ---
 Model* piso;
+Model* piso_exterior;
+Model* piso_pasto;
+
 Model* estante1;
 Model* estante2;
 Model* estante3;
@@ -544,6 +550,10 @@ bool Start() {
     // --- Carga de modelos modulares ---
     museo = new Model("models/IllumModels/proyectofinal/Entorno1.fbx");
     piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
+    piso_exterior = new Model("models/IllumModels/proyectofinal/piso_exterior.fbx");
+
+    piso_pasto = new Model("models/IllumModels/proyectofinal/pasto.fbx");
+
     puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
 
     // Estantes
@@ -971,6 +981,18 @@ bool Update() {
             mLightsShader->setMat4("model", model);
             piso->Draw(*mLightsShader);
 
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, pisoExteriorPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            piso_exterior->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, pisoPastoPos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            piso_pasto->Draw(*mLightsShader);
+
             // Dibujar ESTANTE 1
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante1Pos);
@@ -1328,8 +1350,8 @@ void InitializeCollidableObjects() {
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ estante3, estante3Pos,
-                                     AABB(glm::vec3(-4.0f, 0.0f, -9.0f),
-                                          glm::vec3(2.8f, 7.0f, 9.0f)),
+                                     AABB(glm::vec3(-3.0f, 0.0f, -9.0f),
+                                          glm::vec3(4.8f, 7.0f, 9.0f)),
                                      glm::vec3(1.0f), 0.0f });
     g_collidableObjects.push_back({ estante4, estante4Pos,
                                      AABB(glm::vec3(-4.0f, 0.0f, -10.0f),
