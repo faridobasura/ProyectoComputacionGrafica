@@ -145,6 +145,9 @@ GLuint textShaderID;
 std::vector<InteractiveObject> g_interactiveObjects; // Lista de exhibiciones
 InteractiveObject* g_nearbyObject = nullptr;      // Exhibición más cercana (para "Presiona F")
 InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que estamos interactuando
+
+ISound* currentSound = nullptr;
+
 bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
 bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
 
@@ -485,7 +488,7 @@ bool Start() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Creación de la ventana con GLFW
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Proyecto Final", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "*****MUSEO INTERACTIVO****", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -588,7 +591,7 @@ bool Start() {
     //           ModeloLetrero, PosLetrero,    <-- Modelo y Posición del letrero
     //           TargetLetrero, CamPosLetrero) <-- Cámara para el letrero
 
-    g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Estatua",
+    g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Xiucoatl",
         glm::vec3(0.0f, 5.0f, 1.0f),  // Target Objeto
         glm::vec3(0.0f, 5.0f, 11.0f), // CamPos Objeto
         CuadroPiedra,             // ¡Modelo de letrero! (Cambia si es específico)
@@ -632,7 +635,6 @@ bool Start() {
         glm::vec3(0.0f, 3.5f, 0.0f),
         glm::vec3(0.0f, 4.0f, -8.0f)
     );
-
     g_interactiveObjects.emplace_back(Craneo, CraneoPos, 4.0f, "Craneo",
         glm::vec3(0.0f, 5.0f, 0.0f),
         glm::vec3(0.0f, 6.0f, 3.0f),
@@ -737,9 +739,6 @@ bool Start() {
     light04.Power = glm::vec4(60.0f);
 
     gLights.push_back(light04);
-
-
-    // SoundEngine->play2D("sound/EternalGarden.mp3", true);
 
     InitializeCollidableObjects();
 
@@ -846,7 +845,6 @@ bool Update() {
         float rotationSpeed = 1.0f; // 1 radián por segundo
         g_interactingObject->inspectRotationY += rotationSpeed * deltaTime;
     }
-    // --- FIN DE LÓGICA DE AUTO-ROTACIÓN ---
 
     glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -987,7 +985,6 @@ bool Update() {
             mLightsShader->setMat4("model", model);
             estante2->Draw(*mLightsShader);
 
-            // --- ¡NUEVO! DIBUJAR OBJETOS ESTÁTICOS ---
             model = glm::mat4(1.0f); model = glm::translate(model, estante3Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante3->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante4Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante4->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante5Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante5->Draw(*mLightsShader);
@@ -1011,7 +1008,6 @@ bool Update() {
                 mLightsShader->setMat4("model", model);
                 obj.model->Draw(*mLightsShader);
 
-                // --- ¡NUEVO! Dibuja el letrero asociado ---
                 if (obj.infoStandModel != nullptr) {
                     model = glm::mat4(1.0f);
                     model = glm::translate(model, obj.position + obj.infoStandPos); // Posición absoluta
@@ -1132,14 +1128,10 @@ bool Update() {
 
     glUseProgram(0);
 
-    // --- PASO 3: DIBUJAR LA INTERFAZ 2D (TEXTO) ---
-    // (Debe ir AL FINAL de todo el dibujado, antes de SwapBuffers)
     {
-        // --- ¡LA SOLUCIÓN ESTÁ AQUÍ! ---
-        glDisable(GL_DEPTH_TEST); // Deshabilitar prueba de profundidad
-        glEnable(GL_BLEND);       // Habilitar blending para el texto
+        glDisable(GL_DEPTH_TEST); 
+        glEnable(GL_BLEND);       
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // --- FIN DE LA SOLUCIÓN ---
 
         if (showHelp) {
             std::string helpText =
@@ -1266,10 +1258,6 @@ bool CheckCollisionAtPosition(const glm::vec3& position) {
     return collision;
 }
 
-static void UpdateInteractionsWithCollision() {
-    // Esta función ya no se usa, la lógica está en Update()
-}
-
 void InitializeCollidableObjects() {
 
     //Pared trasera 
@@ -1339,15 +1327,13 @@ void InitializeCollidableObjects() {
                                           glm::vec3(2.0f, 7.0f, 5.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
-    // --- ¡¡AQUÍ EMPIEZA LO QUE FALTABA!! ---
-    // (¡Ajusta las posiciones y las cajas!)
     g_collidableObjects.push_back({ estante3, estante3Pos,
                                      AABB(glm::vec3(-4.0f, 0.0f, -9.0f),
-                                          glm::vec3(4.0f, 7.0f, 9.0f)),
+                                          glm::vec3(2.8f, 7.0f, 9.0f)),
                                      glm::vec3(1.0f), 0.0f });
     g_collidableObjects.push_back({ estante4, estante4Pos,
                                      AABB(glm::vec3(-4.0f, 0.0f, -10.0f),
-                                          glm::vec3(4.0f, 7.0f, 10.0f)),
+                                          glm::vec3(2.8f, 7.0f, 10.0f)),
                                      glm::vec3(1.0f), 0.0f });
     g_collidableObjects.push_back({ estante5, estante5Pos,
                                      AABB(glm::vec3(-2.0f, 0.0f, -5.0f),
@@ -1370,10 +1356,6 @@ void InitializeCollidableObjects() {
                                      AABB(glm::vec3(-2.0f, 0.0f, -3.0f), // Caja de ejemplo
                                           glm::vec3(2.0f, 8.0f, 3.0f)),
                                      glm::vec3(1.0f), 0.0f });
-
-   
-
-
     // --- OBJETOS INTERACTIVOS ---
     g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
                                      AABB(glm::vec3(-4.5f, 0.0f, -4.5f),
@@ -1422,6 +1404,15 @@ void InitializeCollidableObjects() {
 
 }
 
+std::string getSoundForObject(const std::string& objectName) {
+    if (objectName == "Xiucoatl") return "audio/xiucoatl.mp3";
+    if (objectName == "Coatlicue") return "audio/coatlicue.mp3";
+    if (objectName == "Xochipilli") return "audio/xochipilli.mp3";
+    if (objectName == "Piramides") return "audio/piramides.mp3";
+    if (objectName == "PiedraSol") return "audio/piedrasol.mp3";
+    if (objectName == "Puerta") return "audio/puerta.mp3";
+    return "";
+}
 
 // --- ¡¡FUNCIÓN 'processInput' CORREGIDA!! ---
 void processInput(GLFWwindow* window)
@@ -1520,12 +1511,25 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         if (!g_f_keyPressed) {
 
+            if (currentSound) {
+                std::cout << "currentsound" << std::endl;
+
+                currentSound->stop();
+                currentSound->drop(); // Liberar memoria
+                currentSound = nullptr;
+            }
+
             // CASO 1: Empezar a interactuar
             if (g_interactingObject == nullptr && g_nearbyObject != nullptr) {
                 g_interactingObject = g_nearbyObject;
                 g_nearbyObject = nullptr;
                 std::cout << "                                                      \r";
                 std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona G para info.\n";
+                
+                std::string soundFile = getSoundForObject(g_interactingObject->name);
+                if (!soundFile.empty()) {
+                    currentSound = SoundEngine->play2D(soundFile.c_str(), false);
+                }
 
                 g_inspectZoom = 45.0f;
                 g_isInspectingInfoStand = false; // <-- ¡NUEVO! Resetear estado
@@ -1537,6 +1541,8 @@ void processInput(GLFWwindow* window)
                 g_interactingObject->inspectRotationY = 0.0f;
                 g_interactingObject->inspectRotationX = 0.0f;
                 g_interactingObject->isAutoRotatingY = false; // Detenemos la rotación
+
+                std::cout << "else" << std::endl;
 
                 g_interactingObject = nullptr;
                 g_isInspectingInfoStand = false; // <-- ¡NUEVO! Resetear estado
