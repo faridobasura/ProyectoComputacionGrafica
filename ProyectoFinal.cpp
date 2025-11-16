@@ -59,7 +59,6 @@ struct CollidableObject {
     float rotationY;
 };
 
-// --- ¡STRUCT MODIFICADO! ---
 struct InteractiveObject {
     Model* model;
     glm::vec3   position;
@@ -79,18 +78,20 @@ struct InteractiveObject {
     glm::vec3   infoStandPos; // Posición RELATIVA al objeto principal
     glm::vec3   infoInspectTargetOffset; // Objetivo de cámara RELATIVO al letrero
     glm::vec3   infoInspectCamPos;       // Posición de cámara RELATIVA al letrero
-
+    float       infoStandRotation;       // NUEVO: Rotación del letrero en grados
 
     InteractiveObject(Model* m, glm::vec3 pos, float radius, std::string n,
         glm::vec3 mainTargetOffset, glm::vec3 mainCamPos,
         Model* infoModel, glm::vec3 infoPos,
-        glm::vec3 infoTargetOffset, glm::vec3 infoCamPos) :
+        glm::vec3 infoTargetOffset, glm::vec3 infoCamPos,
+        float infoRotation = 0.0f) :  // NUEVO parámetro
 
         model(m), position(pos), triggerRadius(radius), name(n),
         inspectRotationY(0.0f), inspectRotationX(0.0f), isAutoRotatingY(false),
         mainInspectTargetOffset(mainTargetOffset), mainInspectCamPos(mainCamPos),
         infoStandModel(infoModel), infoStandPos(infoPos),
-        infoInspectTargetOffset(infoTargetOffset), infoInspectCamPos(infoCamPos)
+        infoInspectTargetOffset(infoTargetOffset), infoInspectCamPos(infoCamPos),
+        infoStandRotation(infoRotation)  // NUEVO: inicializar rotación
     {
     }
 };
@@ -178,7 +179,7 @@ glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 35.0f);
 glm::vec3 forwardView(0.0f, 0.0f, -1.0f);
 glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f))); //camarad e hombro
 
-float       thirdpersonOffset = 1.5f;
+float       thirdpersonOffset = 2.0f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
 float walkSpeed = 0.1f;
@@ -218,8 +219,8 @@ glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 
 // --- POSICIONES DE OBJETOS ---
-glm::vec3 estatuaPos = position_origin;
-glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -25.0f);
+glm::vec3 xiucoatlPos = position_origin;
+glm::vec3 piramidePos = glm::vec3(0.0f, 0.0f, -28.0f);
 glm::vec3 PiedraSolPos = glm::vec3(0.0f, 0.0f, -77.3f);
 glm::vec3 CoatlicuePos = glm::vec3(-47.55f, 0.0f, -95.0f);
 glm::vec3 PlatoAntiguoPos = glm::vec3(-41.6f, -1.9f, -71.74f);
@@ -227,12 +228,6 @@ glm::vec3 CraneoPos = glm::vec3(-25.39f, -2.18f, -117.27f);
 glm::vec3 IncenciarioPos = glm::vec3(36.63f, 0.0f, -112.64f);
 glm::vec3 XochipilliPos = glm::vec3(51.0f, 0.02f, -93.0f);
 glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
-
-glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 pisoExteriorPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 pisoPastoPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 arbolesPOS = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 bancosPOS = glm::vec3(0.0f, 0.0f, 0.0f);
 
 glm::vec3 estante1Pos = glm::vec3(28.64f, 0.0f, -12.3f);
 glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -14.0f);
@@ -242,12 +237,13 @@ glm::vec3 estante5Pos = glm::vec3(65.0f, 0.0f, -105.93f);
 glm::vec3 estante6Pos = glm::vec3(4.0f, 0.0f, -115.3f);
 glm::vec3 estante7Pos = glm::vec3(-60.64f, 0.0f, -80.93f);
 
-glm::vec3 estante3_paredPOS = glm::vec3(0.0f, 0.0f, -50.00f);
-glm::vec3 estante4_paredPOS = glm::vec3(0.0f, 0.0f, -50.00f);
+glm::vec3 estante3_paredPOS = glm::vec3(23.0f, 0.0f, -40.00f);
+glm::vec3 estante4_paredPOS = glm::vec3(-23.0f, 0.0f, -40.00f);
 
 glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 
 glm::vec3 cuadroPos = glm::vec3(-65.0f, 2.0f, -107.00f);
+glm::vec3 CuadroInformativoXiucoatlPOS = glm::vec3(3.0f, 0.0f, 5.0f);
 
 
 
@@ -271,6 +267,11 @@ Model* piso_pasto;
 Model* arboles;
 Model* bancos;
 
+Model* edificio1;
+Model* edificio2;
+Model* edificio3;
+Model* edificios_fachada;
+
 Model* estante1;
 Model* estante2;
 Model* estante3;
@@ -286,7 +287,7 @@ Model* puertaModel;
 Model* infoStandModel; // <-- ¡NUEVO!
 
 // --- ¡NUEVO! Punteros para tus 10 objetos ---
-Model* CuadroInformativo1;
+Model* CuadroInformativoXiucoatl;
 Model* CuadroCraneo;
 Model* CuadroPiramide;
 Model* CuadroPlato;
@@ -475,7 +476,7 @@ void UpdateThirdPersonCamera() {
     camera3rd.Front = forwardView;
     camera3rd.Position = character_position
         - (thirdpersonOffset * forwardView)
-        + (0.5f * rightView)
+        + (1.0f * rightView)
         + glm::vec3(0.0f, 1.3f, 0.0f);
 }
 
@@ -562,6 +563,11 @@ bool Start() {
     arboles = new Model("models/IllumModels/proyectofinal/arboles.fbx");
     bancos = new Model("models/IllumModels/proyectofinal/bancos.fbx");
 
+    edificio1 = new Model("models/IllumModels/proyectofinal/edificio1.fbx");
+    edificio2 = new Model("models/IllumModels/proyectofinal/edificio2.fbx");
+    edificio3 = new Model("models/IllumModels/proyectofinal/edificio3.fbx");
+    //edificios_fachada = new Model("models/IllumModels/proyectofinal/edificios_fachada.fbx");
+
     puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
 
     // Estantes
@@ -582,15 +588,15 @@ bool Start() {
 
     // --- ¡NUEVO! Cargar tus 10 modelos estáticos ---
     // (Usa los modelos existentes como placeholders, cámbialos por tus archivos .fbx)
-    CuadroInformativo1 = new Model("models/IllumModels/proyectofinal/CuadroInformativo.fbx"); // ¡CAMBIAR!
-    CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx");  // ¡CAMBIAR!
-    CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx"); // ¡CAMBIAR!
-    CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");  // ¡CAMBIAR!
-    CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx"); // ¡CAMBIAR!
-    CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");  // ¡CAMBIAR!
-    CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx"); // ¡CAMBIAR!
-    CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");  // ¡CAMBIAR!
-    CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx"); // ¡CAMBIAR!
+    CuadroInformativoXiucoatl = new Model("models/IllumModels/proyectofinal/CuadroXiucoatl.fbx"); 
+    CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx"); 
+    CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx"); 
+    CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");  
+    CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx"); 
+    CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");  
+    CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx"); 
+    CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");  
+    CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx"); 
     
 
     // Modelos Interactivos
@@ -611,28 +617,30 @@ bool Start() {
     //           ModeloLetrero, PosLetrero,    <-- Modelo y Posición del letrero
     //           TargetLetrero, CamPosLetrero) <-- Cámara para el letrero
 
-    g_interactiveObjects.emplace_back(Xiucoatl, estatuaPos, 6.0f, "Xiucoatl",
+    g_interactiveObjects.emplace_back(Xiucoatl, xiucoatlPos, 6.0f, "Xiucoatl",
         glm::vec3(0.0f, 5.0f, 1.0f),  // Target Objeto
         glm::vec3(0.0f, 5.0f, 11.0f), // CamPos Objeto
-        CuadroPiedra,             // ¡Modelo de letrero! (Cambia si es específico)
-        glm::vec3(5.0f, 0.0f, 3.0f),  // Posición del letrero (relativa a la estatua) ¡AJUSTA ESTO!
-        glm::vec3(-5.0f, 3.5f, 0.0f),  // Target Letrero (relativo al letrero)
-        glm::vec3(7.0f, 4.0f, 0.0f)   // CamPos Letrero (relativo al letrero)
+        CuadroInformativoXiucoatl,     // Modelo de letrero
+        CuadroInformativoXiucoatlPOS,  // Posición del letrero
+        glm::vec3(-5.0f, 3.5f, 0.0f), // Target Letrero
+        glm::vec3(7.0f, 4.0f, 0.0f),  // CamPos Letrero
+        270.0f                         // NUEVO: Rotación del letrero
     );
 
     g_interactiveObjects.emplace_back(piramide, piramidePos, 6.0f, "Piramides",
         glm::vec3(0.0f, 3.0f, 0.0f),
         glm::vec3(0.0f, 5.0f, 12.0f),
         CuadroPiramide,
-        glm::vec3(6.0f, 0.0f, 3.0f),  // Posición del letrero ¡AJUSTA ESTO!
+        glm::vec3(6.0f, 0.0f, 6.0f),  // Posición del letrero ¡AJUSTA ESTO!
         glm::vec3(-5.0f, 4.0f, 0.0f),
-        glm::vec3(8.0f, 4.0f, 0.0f)
+        glm::vec3(8.0f, 4.0f, 0.0f),
+        270.0f
     );
 
     g_interactiveObjects.emplace_back(PiedraDelSol, PiedraSolPos, 19.0f, "PiedraSol",
         glm::vec3(0.0f, 7.0f, 0.0f),
         glm::vec3(0.0f, 7.0f, 15.0f),
-        CuadroInformativo1,
+        CuadroPiedra,
         glm::vec3(-9.32f, -0.16f, 16.0), // Posición del letrero ¡AJUSTA ESTO!
         glm::vec3(0.0f, 4.0f, 0.0f),
         glm::vec3(0.0f, 5.0f, 7.0f)
@@ -690,6 +698,7 @@ bool Start() {
         glm::vec3(0.0f, 3.5f, 0.0f),
         glm::vec3(0.0f, 4.0f, -7.0f)
     );
+
     // --- Fin de Carga de modelos ---
 
     // --- ¡MODIFICADO! Definir las puertas ---
@@ -979,56 +988,23 @@ bool Update() {
 
 
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-            mLightsShader->setMat4("model", model);
-            museo->Draw(*mLightsShader);
+            
+            
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); museo->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); piso->Draw(*mLightsShader);
 
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, pisoPos);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            piso->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); piso_pasto->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); piso_exterior->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); arboles->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); bancos->Draw(*mLightsShader);
 
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, pisoExteriorPos);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            piso_exterior->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio1->Draw(*mLightsShader);
+            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio2->Draw(*mLightsShader);
+            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio3->Draw(*mLightsShader);
+            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificios_fachada->Draw(*mLightsShader);
 
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, pisoPastoPos);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            piso_pasto->Draw(*mLightsShader);
-
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, arbolesPOS);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            arboles->Draw(*mLightsShader);
-
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, bancosPOS);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            bancos->Draw(*mLightsShader);
-
-            // Dibujar ESTANTE 1
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, estante1Pos);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            estante1->Draw(*mLightsShader);
-
-            // Dibujar ESTANTE 2
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, estante2Pos);
-            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            mLightsShader->setMat4("model", model);
-            estante2->Draw(*mLightsShader);
-
+            model = glm::mat4(1.0f); model = glm::translate(model, estante1Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante1->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, estante2Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante2->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante3Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante3->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante4Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante4->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante5Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante5->Draw(*mLightsShader);
@@ -1039,8 +1015,6 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, estante4_paredPOS); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante4_pared->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, caracolPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); caracol->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, cuadroPos); model = glm::scale(model, glm::vec3(3.0f, 3.5f, 3.0f)); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); cuadro->Draw(*mLightsShader);
-
-           
 
             // 2. Dibujar TODOS los objetos interactivos (OPacos)
             for (auto& obj : g_interactiveObjects) {
@@ -1055,14 +1029,15 @@ bool Update() {
 
                 if (obj.infoStandModel != nullptr) {
                     model = glm::mat4(1.0f);
-                    model = glm::translate(model, obj.position + obj.infoStandPos); // Posición absoluta
-                    // (Añade rotación para el letrero si es necesario)
-                    // model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
+                    model = glm::translate(model, obj.position + obj.infoStandPos);
+
+                    // APLICAR LA ROTACIÓN PERSONALIZADA
+                    model = glm::rotate(model, glm::radians(obj.infoStandRotation), glm::vec3(0.0f, 1.0f, 0.0f));
+
                     model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
                     mLightsShader->setMat4("model", model);
                     obj.infoStandModel->Draw(*mLightsShader);
                 }
-                // --- FIN DE NUEVO ---
             }
         }
     }
@@ -1112,7 +1087,7 @@ bool Update() {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, character_position);
         model = glm::rotate(model, glm::radians(rotateCharacter), glm::vec3(0.0, 1.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.0095f, 0.0095f, 0.0095f));
+        model = glm::scale(model, glm::vec3(0.012f, 0.012f, 0.012f));
         dynamicShader->setMat4("model", model);
         dynamicShader->setMat4("gBones", MAX_RIGGING_BONES, character01->gBones);
         character01->Draw(*dynamicShader);
@@ -1314,14 +1289,14 @@ void InitializeCollidableObjects() {
         });
 
     //FIN IZQUIERDO
-    g_collidableObjects.push_back({ museo, glm::vec3(-35.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-1.0f, 0.0f, -50.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(-15.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
                glm::vec3(1.0f, 20.0f, 70.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //FIN DERECHO
-    g_collidableObjects.push_back({ museo, glm::vec3(35.0f, 0.0f, 0.0f),
-         AABB(glm::vec3(-1.0f, 0.0f, -50.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(15.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
                glm::vec3(1.0f, 20.0f, 70.0f)),
          glm::vec3(1.0f), 0.0f
         });
@@ -1406,18 +1381,18 @@ void InitializeCollidableObjects() {
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ estante3_pared, estante3_paredPOS,
-                                     AABB(glm::vec3(-0.5f, 0.0f, -10.0f),
-                                          glm::vec3(0.5f, 7.0f, 10.0f)),
+                                     AABB(glm::vec3(-2.8f, 0.0f, -12.0f),
+                                          glm::vec3(2.8f, 15.0f, 13.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ estante4, estante4Pos,
-                                     AABB(glm::vec3(-4.0f, 0.0f, -10.0f),
+                                     AABB(glm::vec3(-3.0f, 0.0f, -10.0f),
                                           glm::vec3(2.8f, 7.0f, 10.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ estante4_pared, estante4_paredPOS,
-                                 AABB(glm::vec3(-0.5f, 0.0f, -10.0f),
-                                      glm::vec3(0.5f, 7.0f, 10.0f)),
+                                 AABB(glm::vec3(-1.0f, 0.0f, -12.0f),
+                                      glm::vec3(2.8f, 15.0f, 13.0f)),
                                  glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ estante5, estante5Pos,
@@ -1442,14 +1417,14 @@ void InitializeCollidableObjects() {
                                           glm::vec3(2.0f, 8.0f, 3.0f)),
                                      glm::vec3(1.0f), 0.0f });
     // --- OBJETOS INTERACTIVOS ---
-    g_collidableObjects.push_back({ Xiucoatl, estatuaPos,
+    g_collidableObjects.push_back({ Xiucoatl, xiucoatlPos,
                                      AABB(glm::vec3(-4.5f, 0.0f, -4.5f),
                                           glm::vec3(4.5f, 8.0f, 4.5f)),
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ piramide, piramidePos,
-                                     AABB(glm::vec3(-4.0f, 0.0f, -4.0f),
-                                          glm::vec3(4.0f, 4.0f, 4.0f)),
+                                     AABB(glm::vec3(-6.0f, 0.0f, -5.0f),
+                                          glm::vec3(6.0f, 4.0f, 5.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
     g_collidableObjects.push_back({ PiedraDelSol, PiedraSolPos,
@@ -1486,6 +1461,16 @@ void InitializeCollidableObjects() {
                                      AABB(glm::vec3(-2.0f, 0.0f, -2.0f),
                                           glm::vec3(2.0f, 8.0f, 2.0f)),
                                      glm::vec3(1.0f), 0.0f });
+
+    //CuadroInformativoXiucoatl = new Model("models/IllumModels/proyectofinal/CuadroInformativo.fbx");
+    //CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx");
+    //CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx");
+    //CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");
+    //CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx");
+    //CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");
+    //CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx");
+    //CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");
+    //CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx");
 
 }
 
