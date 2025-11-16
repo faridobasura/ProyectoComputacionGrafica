@@ -147,7 +147,7 @@ std::vector<InteractiveObject> g_interactiveObjects; // Lista de exhibiciones
 InteractiveObject* g_nearbyObject = nullptr;      // Exhibición más cercana (para "Presiona F")
 InteractiveObject* g_interactingObject = nullptr; // Exhibición con la que estamos interactuando
 
-ISound* currentSound = nullptr;
+bool currentSound = false;
 
 bool g_f_keyPressed = false; // Para detectar una sola pulsación de 'F'
 bool g_y_keyPressed = false; // Para detectar una sola pulsación de 'Y'
@@ -267,10 +267,7 @@ Model* piso_pasto;
 Model* arboles;
 Model* bancos;
 
-Model* edificio1;
-Model* edificio2;
-Model* edificio3;
-Model* edificios_fachada;
+Model* edificios;
 
 Model* estante1;
 Model* estante2;
@@ -563,10 +560,7 @@ bool Start() {
     arboles = new Model("models/IllumModels/proyectofinal/arboles.fbx");
     bancos = new Model("models/IllumModels/proyectofinal/bancos.fbx");
 
-    edificio1 = new Model("models/IllumModels/proyectofinal/edificio1.fbx");
-    edificio2 = new Model("models/IllumModels/proyectofinal/edificio2.fbx");
-    edificio3 = new Model("models/IllumModels/proyectofinal/edificio3.fbx");
-    //edificios_fachada = new Model("models/IllumModels/proyectofinal/edificios_fachada.fbx");
+    edificios = new Model("models/IllumModels/proyectofinal/edificios.fbx");
 
     puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
 
@@ -934,6 +928,7 @@ bool Update() {
     {
         mainCubeMap->drawCubeMap(*cubemapShader, projection, view);
     }
+   
 
     // --- PASO 1: DIBUJAR TODOS LOS OBJETOS OPACOS ---
     {
@@ -998,10 +993,7 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); arboles->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); bancos->Draw(*mLightsShader);
 
-            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio1->Draw(*mLightsShader);
-            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio2->Draw(*mLightsShader);
-            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificio3->Draw(*mLightsShader);
-            //model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificios_fachada->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificios->Draw(*mLightsShader);
 
             model = glm::mat4(1.0f); model = glm::translate(model, estante1Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante1->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante2Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante2->Draw(*mLightsShader);
@@ -1581,14 +1573,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         if (!g_f_keyPressed) {
 
-            if (currentSound) {
-                std::cout << "currentsound" << std::endl;
-
-                currentSound->stop();
-                currentSound->drop(); // Liberar memoria
-                currentSound = nullptr;
-            }
-
             // CASO 1: Empezar a interactuar
             if (g_interactingObject == nullptr && g_nearbyObject != nullptr) {
                 g_interactingObject = g_nearbyObject;
@@ -1598,7 +1582,10 @@ void processInput(GLFWwindow* window)
                 
                 std::string soundFile = getSoundForObject(g_interactingObject->name);
                 if (!soundFile.empty()) {
-                    currentSound = SoundEngine->play2D(soundFile.c_str(), false);
+                    SoundEngine->play2D(soundFile.c_str(), false);
+                    currentSound = true;
+                    std::cout << "PLAYING currentSound " << currentSound << std::endl;
+
                 }
 
                 g_inspectZoom = 45.0f;
@@ -1607,14 +1594,23 @@ void processInput(GLFWwindow* window)
             // CASO 2: Dejar de interactuar
             else if (g_interactingObject != nullptr) {
 
+                // SALIENDO de la interacción
+                std::cout << "Dentro de stoppig currentSound " << currentSound<< std::endl;
+                if (currentSound) {
+                    SoundEngine->stopAllSounds();
+                    currentSound = false;
+                }
+
                 // Reseteamos el estado del objeto a su original al salir
                 g_interactingObject->inspectRotationY = 0.0f;
                 g_interactingObject->inspectRotationX = 0.0f;
                 g_interactingObject->isAutoRotatingY = false; // Detenemos la rotación
 
-                std::cout << "else" << std::endl;
 
                 g_interactingObject = nullptr;
+
+                std::cout << "g_interactingObject " << g_interactingObject << std::endl;
+
                 g_isInspectingInfoStand = false; // <-- ¡NUEVO! Resetear estado
             }
         }
