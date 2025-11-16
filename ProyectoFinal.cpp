@@ -588,7 +588,7 @@ bool Start() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Creación de la ventana con GLFW
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "*******************************************************************MUSEO INTERACTIVO**********************************************************", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "*******************************************************************MUSEO INTERACTIVO********************************************", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
