@@ -174,7 +174,7 @@ const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 768;
 
 // Variables del personaje
-glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 20.0f);
+glm::vec3 character_position = glm::vec3(0.0f, 0.0f, 35.0f);
 glm::vec3 forwardView(0.0f, 0.0f, -1.0f);
 glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0f, 0.0f))); //camarad e hombro
 
@@ -231,6 +231,8 @@ glm::vec3 BraceroPos = glm::vec3(37.94f, 0.10f, -70.74f);
 glm::vec3 pisoPos = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 pisoExteriorPos = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 pisoPastoPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 arbolesPOS = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 bancosPOS = glm::vec3(0.0f, 0.0f, 0.0f);
 
 glm::vec3 estante1Pos = glm::vec3(28.64f, 0.0f, -12.3f);
 glm::vec3 estante2Pos = glm::vec3(-29.181f, 0.0f, -14.0f);
@@ -240,7 +242,8 @@ glm::vec3 estante5Pos = glm::vec3(65.0f, 0.0f, -105.93f);
 glm::vec3 estante6Pos = glm::vec3(4.0f, 0.0f, -115.3f);
 glm::vec3 estante7Pos = glm::vec3(-60.64f, 0.0f, -80.93f);
 
-glm::vec3 paredes_estantesPos = glm::vec3(0.0f, 0.0f, -45.00f);
+glm::vec3 estante3_paredPOS = glm::vec3(0.0f, 0.0f, -50.00f);
+glm::vec3 estante4_paredPOS = glm::vec3(0.0f, 0.0f, -50.00f);
 
 glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 
@@ -265,6 +268,8 @@ Model* museo; // Entorno
 Model* piso;
 Model* piso_exterior;
 Model* piso_pasto;
+Model* arboles;
+Model* bancos;
 
 Model* estante1;
 Model* estante2;
@@ -274,7 +279,8 @@ Model* estante5;
 Model* estante6;
 Model* estante7;
 
-Model* paredes_estantes;
+Model* estante3_pared;
+Model* estante4_pared;
 
 Model* puertaModel;
 Model* infoStandModel; // <-- ¡NUEVO!
@@ -553,6 +559,8 @@ bool Start() {
     piso_exterior = new Model("models/IllumModels/proyectofinal/piso_exterior.fbx");
 
     piso_pasto = new Model("models/IllumModels/proyectofinal/pasto.fbx");
+    arboles = new Model("models/IllumModels/proyectofinal/arboles.fbx");
+    bancos = new Model("models/IllumModels/proyectofinal/bancos.fbx");
 
     puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
 
@@ -564,7 +572,9 @@ bool Start() {
     estante5 = new Model("models/IllumModels/proyectofinal/estante5.fbx");
     estante6 = new Model("models/IllumModels/proyectofinal/estante6.fbx");
     estante7 = new Model("models/IllumModels/proyectofinal/estante7.fbx");
-    paredes_estantes = new Model("models/IllumModels/proyectofinal/paredes_estantes.fbx");
+    estante3_pared = new Model("models/IllumModels/proyectofinal/estante3_pared.fbx");
+    estante4_pared = new Model("models/IllumModels/proyectofinal/estante4_pared.fbx");
+
 
     // Otros objetos estáticos
     caracol = new Model("models/IllumModels/proyectofinal/caracol.fbx");
@@ -591,7 +601,7 @@ bool Start() {
     PlatoAntiguo = new Model("models/IllumModels/proyectofinal/PlatoAntiguo.fbx");
     Craneo = new Model("models/IllumModels/proyectofinal/Craneo.fbx");
     Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
-    Xochipilli = new Model("models/IllumModels/proyectofinal/Xochipilli.fbx");
+    Xochipilli = new Model("models/IllumModels/proyectofinal/xochipilli.fbx");
     Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
     character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje2.fbx");
 
@@ -993,6 +1003,18 @@ bool Update() {
             mLightsShader->setMat4("model", model);
             piso_pasto->Draw(*mLightsShader);
 
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, arbolesPOS);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            arboles->Draw(*mLightsShader);
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, bancosPOS);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            bancos->Draw(*mLightsShader);
+
             // Dibujar ESTANTE 1
             model = glm::mat4(1.0f);
             model = glm::translate(model, estante1Pos);
@@ -1013,7 +1035,8 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, estante6Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante6->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, estante7Pos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante7->Draw(*mLightsShader);
 
-            model = glm::mat4(1.0f); model = glm::translate(model, paredes_estantesPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); paredes_estantes->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, estante3_paredPOS); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante3_pared->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, estante4_paredPOS); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); estante4_pared->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, caracolPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); caracol->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, cuadroPos); model = glm::scale(model, glm::vec3(3.0f, 3.5f, 3.0f)); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); cuadro->Draw(*mLightsShader);
 
@@ -1282,6 +1305,34 @@ bool CheckCollisionAtPosition(const glm::vec3& position) {
 
 void InitializeCollidableObjects() {
 
+    //MUNDOOOOO
+     //FIN TRASErO 
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -117.0f),
+         AABB(glm::vec3(-100.0f, 0.0f, -1.0f),
+               glm::vec3(100.0f, 20.0f, 1.0f)),
+         glm::vec3(1.0f), 0.0f
+        });
+
+    //FIN IZQUIERDO
+    g_collidableObjects.push_back({ museo, glm::vec3(-35.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, -50.0f),
+               glm::vec3(1.0f, 20.0f, 70.0f)),
+         glm::vec3(1.0f), 0.0f
+        });
+    //FIN DERECHO
+    g_collidableObjects.push_back({ museo, glm::vec3(35.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, -50.0f),
+               glm::vec3(1.0f, 20.0f, 70.0f)),
+         glm::vec3(1.0f), 0.0f
+        });
+    //FIN FRONTAL
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 68.0f),
+        AABB(glm::vec3(-60.0f, 0.0f, -1.0f),
+             glm::vec3(60.0f, 20.0f, 1.0f)),
+        glm::vec3(1.0f), 0.0f
+        });
+
+
     //Pared trasera 
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, -117.0f),
          AABB(glm::vec3(-70.0f, 0.0f, -0.2f),
@@ -1353,10 +1404,22 @@ void InitializeCollidableObjects() {
                                      AABB(glm::vec3(-3.0f, 0.0f, -9.0f),
                                           glm::vec3(4.8f, 7.0f, 9.0f)),
                                      glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ estante3_pared, estante3_paredPOS,
+                                     AABB(glm::vec3(-0.5f, 0.0f, -10.0f),
+                                          glm::vec3(0.5f, 7.0f, 10.0f)),
+                                     glm::vec3(1.0f), 0.0f });
+
     g_collidableObjects.push_back({ estante4, estante4Pos,
                                      AABB(glm::vec3(-4.0f, 0.0f, -10.0f),
                                           glm::vec3(2.8f, 7.0f, 10.0f)),
                                      glm::vec3(1.0f), 0.0f });
+
+    g_collidableObjects.push_back({ estante4_pared, estante4_paredPOS,
+                                 AABB(glm::vec3(-0.5f, 0.0f, -10.0f),
+                                      glm::vec3(0.5f, 7.0f, 10.0f)),
+                                 glm::vec3(1.0f), 0.0f });
+
     g_collidableObjects.push_back({ estante5, estante5Pos,
                                      AABB(glm::vec3(-2.0f, 0.0f, -5.0f),
                                           glm::vec3(2.0f, 9.0f, 4.0f)),
