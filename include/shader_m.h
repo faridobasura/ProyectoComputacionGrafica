@@ -30,6 +30,8 @@ public:
         vShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
         fShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
         gShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
+
+
         try 
         {
             // open files
@@ -45,7 +47,8 @@ public:
             // convert stream into string
             vertexCode = vShaderStream.str();
             fragmentCode = fShaderStream.str();			
-            // if geometry shader path is present, also load a geometry shader
+            // if geometry shader path is present, also load a geometry shader";
+
             if(geometryPath != nullptr)
             {
                 gShaderFile.open(geometryPath);

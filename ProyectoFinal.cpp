@@ -391,7 +391,8 @@ void initGrass() {
     grassShader = new Shader("shaders/grass_shader.vs", "shaders/grass_shader.fs");
     grassAlbedoID = loadTexture("textures/grass.jpg");
 
-    piso_pasto = new Model("models/IllumModels/proyectofinal/pasto.fbx");
+    piso_pasto = new Model("models/proyectofinal/pasto.fbx");
+    //piso_pasto = new Model("models/proyectofinal/piso_pasto_sub.fbx");
 
 
     grassModel = piso_pasto;  
@@ -428,12 +429,8 @@ void renderGrass() {
     grassShader->setInt("grassAlbedo", 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, grassAlbedoID);
-    std::cout << "Texture ID: " << grassAlbedoID << std::endl;
-
 
     grassModel->Draw(*grassShader);
-    std::cout << "Draw completed" << std::endl;
-
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cout << "OpenGL error: " << err << std::endl;
@@ -591,7 +588,7 @@ bool Start() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Creación de la ventana con GLFW
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "*****MUSEO INTERACTIVO****", NULL, NULL);
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "*******************************************************************MUSEO INTERACTIVO**********************************************************", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -608,6 +605,19 @@ bool Start() {
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return false;
+    }
+
+    // Cargar imagen del icono
+    GLFWimage icons[1];
+    icons[0].pixels = stbi_load("textures/window_logo/window_logo.png", &icons[0].width, &icons[0].height, 0, 4);
+
+    if (icons[0].pixels) {
+        glfwSetWindowIcon(window, 1, icons);
+        std::cout << "Logo cargado en la ventana" << std::endl;
+        stbi_image_free(icons[0].pixels);
+    }
+    else {
+        std::cout << "No se pudo cargar el logo" << std::endl;
     }
 
     // Activación de buffer de profundidad
@@ -648,57 +658,57 @@ bool Start() {
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
     // --- Carga de modelos modulares ---
-    museo = new Model("models/IllumModels/proyectofinal/Entorno1.fbx");
-    piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
-    piso_exterior = new Model("models/IllumModels/proyectofinal/piso_exterior.fbx");
+    museo = new Model("models/proyectofinal/Entorno1.fbx");
+    piso = new Model("models/proyectofinal/Piso.fbx");
+    piso_exterior = new Model("models/proyectofinal/piso_exterior.fbx");
 
-    arboles = new Model("models/IllumModels/proyectofinal/arboles.fbx");
-    bancos = new Model("models/IllumModels/proyectofinal/bancos.fbx");
+    arboles = new Model("models/proyectofinal/arboles.fbx");
+    bancos = new Model("models/proyectofinal/bancos.fbx");
 
-    edificios = new Model("models/IllumModels/proyectofinal/edificios.fbx");
+    edificios = new Model("models/proyectofinal/edificios.fbx");
 
-    puertaModel = new Model("models/IllumModels/proyectofinal/puerta.fbx");
+    puertaModel = new Model("models/proyectofinal/puerta.fbx");
 
     // Estantes
-    estante1 = new Model("models/IllumModels/proyectofinal/estante1.fbx");
-    estante2 = new Model("models/IllumModels/proyectofinal/estante2.fbx");
-    estante3 = new Model("models/IllumModels/proyectofinal/estante3.fbx");
-    estante4 = new Model("models/IllumModels/proyectofinal/estante4.fbx");
-    estante5 = new Model("models/IllumModels/proyectofinal/estante5.fbx");
-    estante6 = new Model("models/IllumModels/proyectofinal/estante6.fbx");
-    estante7 = new Model("models/IllumModels/proyectofinal/estante7.fbx");
-    estante3_pared = new Model("models/IllumModels/proyectofinal/estante3_pared.fbx");
-    estante4_pared = new Model("models/IllumModels/proyectofinal/estante4_pared.fbx");
+    estante1 = new Model("models/proyectofinal/estante1.fbx");
+    estante2 = new Model("models/proyectofinal/estante2.fbx");
+    estante3 = new Model("models/proyectofinal/estante3.fbx");
+    estante4 = new Model("models/proyectofinal/estante4.fbx");
+    estante5 = new Model("models/proyectofinal/estante5.fbx");
+    estante6 = new Model("models/proyectofinal/estante6.fbx");
+    estante7 = new Model("models/proyectofinal/estante7.fbx");
+    estante3_pared = new Model("models/proyectofinal/estante3_pared.fbx");
+    estante4_pared = new Model("models/proyectofinal/estante4_pared.fbx");
 
 
     // Otros objetos estáticos
-    caracol = new Model("models/IllumModels/proyectofinal/caracol.fbx");
-    cuadro = new Model("models/IllumModels/proyectofinal/cuadro.fbx");
+    caracol = new Model("models/proyectofinal/caracol.fbx");
+    cuadro = new Model("models/proyectofinal/cuadro.fbx");
 
     // --- ¡NUEVO! Cargar tus 10 modelos estáticos ---
     // (Usa los modelos existentes como placeholders, cámbialos por tus archivos .fbx)
-    CuadroInformativoXiucoatl = new Model("models/IllumModels/proyectofinal/CuadroXiucoatl.fbx"); 
-    CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx"); 
-    CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx"); 
-    CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");  
-    CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx"); 
-    CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");  
-    CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx"); 
-    CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");  
-    CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx"); 
+    CuadroInformativoXiucoatl = new Model("models/proyectofinal/CuadroXiucoatl.fbx"); 
+    CuadroCraneo = new Model("models/proyectofinal/CuadroCraneo.fbx"); 
+    CuadroPiramide = new Model("models/proyectofinal/CuadroPiramide.fbx"); 
+    CuadroPlato = new Model("models/proyectofinal/CuadroPlato.fbx");  
+    CuadroCoatlicue = new Model("models/proyectofinal/CuadroCoatlicue.fbx"); 
+    CuadroPiedra = new Model("models/proyectofinal/CuadroPiedra.fbx");  
+    CuadroXochipilli = new Model("models/proyectofinal/CuadroXochipilli.fbx"); 
+    CuadroIncenciario = new Model("models/proyectofinal/CuadroIncenciario.fbx");  
+    CuadroBracero = new Model("models/proyectofinal/CuadroBracero.fbx"); 
     
 
     // Modelos Interactivos
-    Xiucoatl = new Model("models/IllumModels/proyectofinal/xiucoatl.fbx");
-    piramide = new Model("models/IllumModels/proyectofinal/piramides.fbx");
-    PiedraDelSol = new Model("models/IllumModels/proyectofinal/PiedraDelSol.fbx");
-    Coatlicue = new Model("models/IllumModels/proyectofinal/Coatlicue.fbx");
-    PlatoAntiguo = new Model("models/IllumModels/proyectofinal/PlatoAntiguo.fbx");
-    Craneo = new Model("models/IllumModels/proyectofinal/Craneo.fbx");
-    Incenciario = new Model("models/IllumModels/proyectofinal/Incenciario.fbx");
-    Xochipilli = new Model("models/IllumModels/proyectofinal/xochipilli.fbx");
-    Bracero = new Model("models/IllumModels/proyectofinal/Bracero.fbx");
-    character01 = new AnimatedModel("models/IllumModels/proyectofinal/personaje2.fbx");
+    Xiucoatl = new Model("models/proyectofinal/xiucoatl.fbx");
+    piramide = new Model("models/proyectofinal/piramides.fbx");
+    PiedraDelSol = new Model("models/proyectofinal/PiedraDelSol.fbx");
+    Coatlicue = new Model("models/proyectofinal/Coatlicue.fbx");
+    PlatoAntiguo = new Model("models/proyectofinal/PlatoAntiguo.fbx");
+    Craneo = new Model("models/proyectofinal/Craneo.fbx");
+    Incenciario = new Model("models/proyectofinal/Incenciario.fbx");
+    Xochipilli = new Model("models/proyectofinal/xochipilli.fbx");
+    Bracero = new Model("models/proyectofinal/Bracero.fbx");
+    character01 = new AnimatedModel("models/proyectofinal/personaje2.fbx");
 
     // --- ¡MODIFICADO! Configuración de cámaras de inspección ---
     // Formato: (Modelo, Pos, Radio, Nombre, 
@@ -790,8 +800,7 @@ bool Start() {
 
     // --- Fin de Carga de modelos ---
 
-    // --- ¡MODIFICADO! Definir las puertas ---
-    // Basado en tu imagen, X: -5.1117, Y(Blender): -31.297 -> Z(OpenGL): 31.297
+    // --- ¡MODIFICADO! Definir las puertas --
 
     // 1. Define las posiciones CERRADAS
     glm::vec3 puerta1_closedPos = glm::vec3(-5.0f, 0.0f, 31.297f);
@@ -1384,7 +1393,7 @@ void InitializeCollidableObjects() {
          glm::vec3(1.0f), 0.0f
         });
     //FIN DERECHO
-    g_collidableObjects.push_back({ museo, glm::vec3(15.0f, 0.0f, 0.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(14.0f, 0.0f, 0.0f),
          AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
                glm::vec3(1.0f, 20.0f, 70.0f)),
          glm::vec3(1.0f), 0.0f
@@ -1551,15 +1560,15 @@ void InitializeCollidableObjects() {
                                           glm::vec3(2.0f, 8.0f, 2.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
-    //CuadroInformativoXiucoatl = new Model("models/IllumModels/proyectofinal/CuadroInformativo.fbx");
-    //CuadroCraneo = new Model("models/IllumModels/proyectofinal/CuadroCraneo.fbx");
-    //CuadroPiramide = new Model("models/IllumModels/proyectofinal/CuadroPiramide.fbx");
-    //CuadroPlato = new Model("models/IllumModels/proyectofinal/CuadroPlato.fbx");
-    //CuadroCoatlicue = new Model("models/IllumModels/proyectofinal/CuadroCoatlicue.fbx");
-    //CuadroPiedra = new Model("models/IllumModels/proyectofinal/CuadroPiedra.fbx");
-    //CuadroXochipilli = new Model("models/IllumModels/proyectofinal/CuadroXochipilli.fbx");
-    //CuadroIncenciario = new Model("models/IllumModels/proyectofinal/CuadroIncenciario.fbx");
-    //CuadroBracero = new Model("models/IllumModels/proyectofinal/CuadroBracero.fbx");
+    //CuadroInformativoXiucoatl = new Model("models/proyectofinal/CuadroInformativo.fbx");
+    //CuadroCraneo = new Model("models/proyectofinal/CuadroCraneo.fbx");
+    //CuadroPiramide = new Model("models/proyectofinal/CuadroPiramide.fbx");
+    //CuadroPlato = new Model("models/proyectofinal/CuadroPlato.fbx");
+    //CuadroCoatlicue = new Model("models/proyectofinal/CuadroCoatlicue.fbx");
+    //CuadroPiedra = new Model("models/proyectofinal/CuadroPiedra.fbx");
+    //CuadroXochipilli = new Model("models/proyectofinal/CuadroXochipilli.fbx");
+    //CuadroIncenciario = new Model("models/proyectofinal/CuadroIncenciario.fbx");
+    //CuadroBracero = new Model("models/proyectofinal/CuadroBracero.fbx");
 
 }
 
