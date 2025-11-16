@@ -37,7 +37,7 @@
 
 #include <irrKlang.h>
 #include <algorithm> 
-
+#include <grass_shader.h>
 
 using namespace irrklang;
 
@@ -245,9 +245,6 @@ glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 glm::vec3 cuadroPos = glm::vec3(-65.0f, 2.0f, -107.00f);
 glm::vec3 CuadroInformativoXiucoatlPOS = glm::vec3(3.0f, 0.0f, 5.0f);
 
-
-
-
 Shader* mLightsShader;
 Shader* proceduralShader;
 Shader* wavesShader;
@@ -256,6 +253,7 @@ Shader* cubemapShader;
 Shader* dynamicShader;
 Shader* textShader;
 Shader* glassShader; // <-- ¡NUEVO!
+Shader* grassShader;
 
 // Carga la información de los modelo
 Model* museo; // Entorno
@@ -266,6 +264,7 @@ Model* piso_exterior;
 Model* piso_pasto;
 Model* arboles;
 Model* bancos;
+Model* grassModel;
 
 Model* edificios;
 
@@ -329,6 +328,11 @@ ISoundEngine* SoundEngine = createIrrKlangDevice();
 // selección de cámara
 int activeCamera = 1;
 
+// Variables para el pasto
+GLuint grassVAO, grassVBO, grassEBO;
+GLuint grassAlbedoID;
+glm::mat4 grassModelMatrix = glm::mat4(1.0f); // Para el pasto específicamente
+
 
 // Entrada a función principal
 int main()
@@ -347,6 +351,95 @@ int main()
     return 0;
 
 }
+
+GLuint loadTexture(const char* path) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+        std::cout << "Texture loaded: " << path << std::endl;
+    }
+    else {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
+void initGrass() {
+    grassShader = new Shader("shaders/grass_shader.vs", "shaders/grass_shader.fs");
+    grassAlbedoID = loadTexture("textures/grass.jpg");
+
+    piso_pasto = new Model("models/IllumModels/proyectofinal/pasto.fbx");
+
+
+    grassModel = piso_pasto;  
+
+    grassModelMatrix = glm::mat4(1.0f);
+    grassModelMatrix = glm::translate(grassModelMatrix, glm::vec3(0.0f, 5.0f, 0.0f));
+    grassModelMatrix = glm::scale(grassModelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
+}
+
+void renderGrass() {
+
+    glDisable(GL_CULL_FACE);
+
+    Camera& currentCamera = (activeCamera == 0) ? camera1st : camera3rd;
+    glm::mat4 view = currentCamera.GetViewMatrix();
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+        (float)SCR_WIDTH / (float)SCR_HEIGHT,
+        0.1f, 1000.0f);
+
+    grassShader->use();
+
+    grassShader->setMat4("projection", projection);
+    grassShader->setMat4("view", view);
+    grassShader->setMat4("model", grassModelMatrix);
+
+    grassShader->setFloat("time", (float)glfwGetTime());
+    grassShader->setVec3("windDirection", glm::vec3(0.8f, 0.0f, 0.6f));
+    grassShader->setFloat("windStrength", 0.4f);
+
+    grassShader->setVec3("viewPos", currentCamera.Position);
+    grassShader->setVec3("lightPos", glm::vec3(0.0f, 100.0f, 0.0f));
+    grassShader->setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+
+    grassShader->setInt("grassAlbedo", 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, grassAlbedoID);
+    std::cout << "Texture ID: " << grassAlbedoID << std::endl;
+
+
+    grassModel->Draw(*grassShader);
+    std::cout << "Draw completed" << std::endl;
+
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cout << "OpenGL error: " << err << std::endl;
+    }
+}
+
 
 static void CreateDebugCube() {
     float vertices[] = {
@@ -531,7 +624,10 @@ bool Start() {
 
     textShaderID = textShader->ID;
 
+    initGrass();
+
     // textManager.textShaderID = textShaderID; // Esto es de TextManager, no de TextRenderer
+
 
     if (!glfwGetCurrentContext()) {
         std::cerr << "Error: No hay un contexto de OpenGL activo antes de inicializar TextRenderer\n";
@@ -556,7 +652,6 @@ bool Start() {
     piso = new Model("models/IllumModels/proyectofinal/Piso.fbx");
     piso_exterior = new Model("models/IllumModels/proyectofinal/piso_exterior.fbx");
 
-    piso_pasto = new Model("models/IllumModels/proyectofinal/pasto.fbx");
     arboles = new Model("models/IllumModels/proyectofinal/arboles.fbx");
     bancos = new Model("models/IllumModels/proyectofinal/bancos.fbx");
 
@@ -813,6 +908,8 @@ bool Update() {
     g_nearbyObject = nullptr; // Reiniciar cada frame
     g_isNearDoors = false;   // --- ¡MODIFICADO! Reiniciar bandera
     bool foundNearby_flag = false; // Bandera local para saber si se muestra *algún* texto
+
+    renderGrass();
 
     // 1. SOLO si NO estamos interactuando, buscamos objetos cercanos
     if (g_interactingObject == nullptr) {
@@ -1705,7 +1802,6 @@ void processInput(GLFWwindow* window)
                 UpdateCameras();
             }
             else {
-                // std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl; // Reducir spam
                 character_position = oldPosition;
                 UpdateCameras();
             }
@@ -1722,7 +1818,6 @@ void processInput(GLFWwindow* window)
                 UpdateCameras();
             }
             else {
-                // std::cout << "COLISIÓN - Movimiento bloqueado" << std::endl; // Reducir spam
                 character_position = oldPosition;
                 UpdateCameras();
             }
