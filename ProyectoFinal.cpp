@@ -1154,11 +1154,11 @@ bool Start() {
 
     // Añadir misiones
    
-    g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "Xiucoatl");
-    g_missionManager.AddMission(piramidePos + glm::vec3(-5.0f, 0.0f, 0.0f), 3.0f, "piramide");
-    g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "PiedraDelSol");
-    g_missionManager.AddMission(XochipilliPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "Xochipilli");
-    g_missionManager.AddMission(CoatlicuePos + glm::vec3(8.0f, 0.0f, 0.0f), 4.0f, "Coatlicue");
+    g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.2f), 4.0f, "Xiucoatl");
+    g_missionManager.AddMission(piramidePos + glm::vec3(0.0f, 0.0f, 6.3f), 3.0f, "Piramides");
+    g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 18.0f), 4.0f, "PiedraSol");
+    g_missionManager.AddMission(XochipilliPos + glm::vec3(-3.2f, 0.0f, 0.0f), 4.0f, "Xochipilli");
+    g_missionManager.AddMission(CoatlicuePos + glm::vec3(3.2f, 0.0f, 0.0f), 4.0f, "Coatlicue");
 
 
     return true;

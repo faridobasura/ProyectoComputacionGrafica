@@ -135,7 +135,7 @@ void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, marker.position);
         markerShader->setMat4("model", model);
-        markerShader->setVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 0.3f));
+        markerShader->setVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 0.09f));
 
         glBindVertexArray(cylinderVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 34); // 2 * (16 + 1) = 34 vértices
