@@ -14,7 +14,7 @@
 // Cargar antes glew
 #include <text_render.h>
 #include <TextManager.h> // <-- Declarado pero no usado, lo dejo por si acaso
-
+#include "MissionManager.h"
 
 // GLFW: https://www.glfw.org/
 #include <GLFW/glfw3.h>
@@ -352,6 +352,7 @@ GLuint grassVAO, grassVBO, grassEBO;
 GLuint grassAlbedoID;
 glm::mat4 grassModelMatrix = glm::mat4(1.0f); // Para el pasto específicamente
 
+MissionManager g_missionManager;
 
 // Entrada a función principal
 int main()
@@ -1135,6 +1136,8 @@ bool Start() {
     gLights.push_back(light04);
 
     InitializeCollidableObjects();
+    g_missionManager.Update(character_position);
+   
 
 	// -- Inicialización de lugares por visitar --
     g_achievements["Xiucoatl"] = Achievement("Conociste a Xiucoatl", false);
@@ -1236,6 +1239,8 @@ bool Update() {
     }
     // --- FIN DE LÓGICA DE INTERACCIÓN ---
 
+
+
     // --- ¡NUEVO! LÓGICA DE ANIMACIÓN DE PUERTAS ---
     for (auto& door : g_doors) {
         if (door.state == OPENING) {
@@ -1314,7 +1319,7 @@ bool Update() {
             projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f); // <-- CORREGIDO
             view = camera1st.GetViewMatrix();
         }
-
+        g_missionManager.Render(projection, view);
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
@@ -1588,6 +1593,16 @@ bool Update() {
         if (showInfoPanel)
             DrawAchievementsWindow();
 		//FIN LÓGICA DEL PANEL DE VISITAS 3
+
+        if (!g_missionManager.Initialize()) {
+            std::cout << "Error inicializando sistema de misiones" << std::endl;
+        }
+
+        // Añadir misiones
+        g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f ,6.0f), 4.0f);
+        g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f);
+        g_missionManager.AddMission(CoatlicuePos + glm::vec3(8.0f, 0.0f, 0.0f), 4.0f);
+        g_missionManager.AddMission(piramidePos + glm::vec3(-5.0f, 0.0f, 0.0f), 3.0f);
 
         // --- ¡IMPORTANTE! Restaurar estado ---
         glEnable(GL_DEPTH_TEST); // Volver a habilitar la profundidad para el próximo frame
