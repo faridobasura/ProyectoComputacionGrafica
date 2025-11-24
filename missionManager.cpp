@@ -86,20 +86,36 @@ void MissionManager::CreateCylinderGeometry() {
     glBindVertexArray(0);
 }
 
-void MissionManager::AddMission(glm::vec3 position, float radius) {
-    markers.push_back(MissionMarker(position, radius));
+void MissionManager::AddMission(glm::vec3 position, float radius, std::string name) {
+    MissionMarker newMission = MissionMarker(position, radius, name);
+    newMission.isActive = true;
+    markers.push_back(newMission);
 }
 
 void MissionManager::Update(const glm::vec3& playerPosition) {
-    if (currentMissionIndex >= static_cast<int>(markers.size())) return;
+    if (currentMissionIndex >= static_cast<int>(markers.size())) {
+        std::cout << "No hay misiones o todas completadas" << std::endl;
+        return;
+    }
 
     MissionMarker& currentMarker = markers[currentMissionIndex];
-    if (!currentMarker.isActive) return;
-
-    float distance = glm::distance(playerPosition, currentMarker.position);
-    if (distance < currentMarker.radius) {
-        CompleteCurrentMission();
+    if (!currentMarker.isActive) {
+        std::cout << "Misión actual no está activa: " << currentMarker.name << std::endl;
+        return;
     }
+
+    //float distance = glm::distance(playerPosition, currentMarker.position);
+
+    //if (distance < currentMarker.radius) {
+    //    std::cout << "¡Misión completada por proximidad: " << currentMarker.name << "!" << std::endl;
+    //    CompleteCurrentMission();
+    //}
+}
+std::string MissionManager::GetCurrentMissionName() const {
+    if (currentMissionIndex < static_cast<int>(markers.size())) {
+        return markers[currentMissionIndex].name;
+    }
+    return "Todas las misiones completadas";
 }
 
 void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
@@ -130,21 +146,57 @@ void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
     glDisable(GL_BLEND);
 }
 
-void MissionManager::CompleteCurrentMission() {
-    if (currentMissionIndex < static_cast<int>(markers.size())) {
-        markers[currentMissionIndex].isActive = false;
-        currentMissionIndex++;
+void MissionManager::CompleteMission(std::string missionName) {
+    // Buscar la misión por nombre
+    for (int i = 0; i < markers.size(); ++i) {
+        if (markers[i].name == missionName && !markers[i].isCompleted) {
+            // Completar esta misión
+            markers[i].isCompleted = true;
+            markers[i].isActive = false;
 
-        if (currentMissionIndex < static_cast<int>(markers.size())) {
-            markers[currentMissionIndex].isActive = true;
-            std::cout << "Misión " << currentMissionIndex + 1 << " activada" << std::endl;
-        }
-        else {
-            std::cout << "¡Todas las misiones completadas!" << std::endl;
+            std::cout << "Misión completada por nombre: " << missionName << std::endl;
+
+            // Si era la misión actual, activar la siguiente
+            if (i == currentMissionIndex) {
+                currentMissionIndex++;
+                if (currentMissionIndex < static_cast<int>(markers.size())) {
+                    markers[currentMissionIndex].isActive = true;
+                    std::cout << "Nueva misión activada: " << markers[currentMissionIndex].name << std::endl;
+                }
+                else {
+                    std::cout << "¡Todas las misiones completadas!" << std::endl;
+                }
+            }
+            return; // Salir después de encontrar y completar la misión
         }
     }
+
+    // Si no se encontró la misión
+    std::cout << "Misión no encontrada o ya completada: " << missionName << std::endl;
 }
 
 bool MissionManager::AllMissionsCompleted() const {
     return currentMissionIndex >= static_cast<int>(markers.size());
+}
+
+int MissionManager::GetCompletedMissions() const {
+    int completed = 0;
+    for (const auto& marker : markers) {
+        if (marker.isCompleted) completed++;
+    }
+    return completed;
+}
+
+bool MissionManager::IsMissionActive(int index) const {
+    if (index >= 0 && index < static_cast<int>(markers.size())) {
+        return markers[index].isActive;
+    }
+    return false;
+}
+
+bool MissionManager::IsMissionCompleted(int index) const {
+    if (index >= 0 && index < static_cast<int>(markers.size())) {
+        return markers[index].isCompleted;
+    }
+    return false;
 }

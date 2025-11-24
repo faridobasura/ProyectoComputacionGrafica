@@ -1135,9 +1135,7 @@ bool Start() {
 
     gLights.push_back(light04);
 
-    InitializeCollidableObjects();
-    g_missionManager.Update(character_position);
-   
+    InitializeCollidableObjects();   
 
 	// -- Inicialización de lugares por visitar --
     g_achievements["Xiucoatl"] = Achievement("Conociste a Xiucoatl", false);
@@ -1149,6 +1147,18 @@ bool Start() {
     g_achievements["Incenciario"] = Achievement("Revisaste el Incensario", false);
     g_achievements["Xochipilli"] = Achievement("Visitaste a Xochipilli", false);
     g_achievements["Bracero"] = Achievement("Exploraste el Bracero", false);
+
+    if (!g_missionManager.Initialize()) {
+        std::cout << "Error inicializando sistema de misiones" << std::endl;
+    }
+
+    // Añadir misiones
+   
+    g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "Xiucoatl");
+    g_missionManager.AddMission(piramidePos + glm::vec3(-5.0f, 0.0f, 0.0f), 3.0f, "piramide");
+    g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "PiedraDelSol");
+    g_missionManager.AddMission(XochipilliPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f, "Xochipilli");
+    g_missionManager.AddMission(CoatlicuePos + glm::vec3(8.0f, 0.0f, 0.0f), 4.0f, "Coatlicue");
 
 
     return true;
@@ -1484,11 +1494,18 @@ bool Update() {
         character01->Draw(*dynamicShader);
     }
 
+    g_missionManager.Update(character_position);
+
+    if (g_missionManager.AllMissionsCompleted()) {
+        std::cout << "Misiones Completadas" << std::endl;
+    }
+
     // --- ¡NUEVO! DIBUJAR OBJETOS TRANSPARENTES (VIDRIO) ---
     // (Debe ir DESPUÉS del personaje y ANTES del texto)
     {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
         glassShader->use();
         glassShader->setMat4("projection", projection);
@@ -1593,16 +1610,7 @@ bool Update() {
         if (showInfoPanel)
             DrawAchievementsWindow();
 		//FIN LÓGICA DEL PANEL DE VISITAS 3
-
-        if (!g_missionManager.Initialize()) {
-            std::cout << "Error inicializando sistema de misiones" << std::endl;
-        }
-
-        // Añadir misiones
-        g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f ,6.0f), 4.0f);
-        g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 6.0f), 4.0f);
-        g_missionManager.AddMission(CoatlicuePos + glm::vec3(8.0f, 0.0f, 0.0f), 4.0f);
-        g_missionManager.AddMission(piramidePos + glm::vec3(-5.0f, 0.0f, 0.0f), 3.0f);
+        
 
         // --- ¡IMPORTANTE! Restaurar estado ---
         glEnable(GL_DEPTH_TEST); // Volver a habilitar la profundidad para el próximo frame
@@ -2011,7 +2019,7 @@ void processInput(GLFWwindow* window)
                 g_nearbyObject = nullptr;
                 std::cout << "                                                      \r";
                 std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona G para info.\n";
-
+                g_missionManager.CompleteMission(g_interactingObject->name);
 				//Marcar sitio como visitado
                 auto it = g_achievements.find(g_interactingObject->name);
                 if (it != g_achievements.end()) {
