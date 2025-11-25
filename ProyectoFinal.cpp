@@ -234,6 +234,8 @@ unsigned int debugVAO, debugVBO;
 bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
 bool showHelp = false; // Variable para mostrar/ocultar ayuda
 
+bool isCompleted = false;
+
 glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
 
@@ -363,8 +365,25 @@ int main()
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
-        if (!Update())
-            break;
+        if (!isCompleted) {
+
+            if (!Update())
+                break;
+        }
+        else {
+            if (g_missionManager.AllMissionsCompleted()) {
+                std::string endText =
+                    "FELICIDADES\n"
+                    "TERMINASTE EL RECORRIDO\n";
+
+                textRenderer.RenderText(endText,
+                    (float)SCR_WIDTH * 0.3f,
+                    (float)SCR_HEIGHT * 0.8f, // Arriba
+                    0.6f,
+                    glm::vec3(0.8f, 0.6f, 1.0f));
+            }
+        }
+
     }
 
     glfwTerminate();
@@ -1152,18 +1171,16 @@ bool Start() {
     g_achievements["Xiucoatl"] = Achievement("Conociste a Xiucoatl", false);
     g_achievements["Piramides"] = Achievement("Entraste a las Piramides", false);
     g_achievements["PiedraSol"] = Achievement("Descubriste la Piedra del Sol", false);
-    g_achievements["Coatlicue"] = Achievement("Observaste a Coatlicue", false);
-    g_achievements["PlatoAntiguo"] = Achievement("Encontraste el Plato Antiguo", false);
-    g_achievements["Craneo"] = Achievement("Examinaste el Craneo", false);
-    g_achievements["Incenciario"] = Achievement("Revisaste el Incensario", false);
-    g_achievements["Xochipilli"] = Achievement("Visitaste a Xochipilli", false);
     g_achievements["Bracero"] = Achievement("Exploraste el Bracero", false);
 
-    if (!g_missionManager.Initialize()) {
-        std::cout << "Error inicializando sistema de misiones" << std::endl;
-    }
+    g_achievements["Xochipilli"] = Achievement("Visitaste a Xochipilli", false);
+    g_achievements["Incenciario"] = Achievement("Revisaste el Incensario", false);
 
-   
+    g_achievements["Craneo"] = Achievement("Examinaste el Craneo", false);
+    g_achievements["Coatlicue"] = Achievement("Observaste a Coatlicue", false);
+    g_achievements["PlatoAntiguo"] = Achievement("Encontraste el Plato Antiguo", false);
+    
+    
     g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.2f), 4.0f, "Xiucoatl");
     g_missionManager.AddMission(piramidePos + glm::vec3(0.0f, 0.0f, 6.7f), 3.0f, "Piramides");
     g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 18.0f), 4.0f, "PiedraSol");
@@ -1173,6 +1190,11 @@ bool Start() {
     g_missionManager.AddMission(CraneoPos + glm::vec3(0.0f, 2.0f, 2.5f), 3.0f, "Craneo");
     g_missionManager.AddMission(IncenciarioPos + glm::vec3(0.0f, 0.0f, 5.0f), 4.0f, "Incenciario");
     g_missionManager.AddMission(BraceroPos + glm::vec3(0.0f, 0.0f, -3.0f), 4.0f, "Bracero");
+
+
+    if (!g_missionManager.Initialize()) {
+        std::cout << "Error inicializando sistema de misiones" << std::endl;
+    }
 
     return true;
 }
@@ -1511,16 +1533,9 @@ bool Update() {
     g_missionManager.Update(character_position);
 
     if (g_missionManager.AllMissionsCompleted()) {
-        std::string endText =
-            "FELICIDADES\n"
-            "TERMINASTE EL RECORRIDO\n";
-        std::cout << "MISIONES TERMINADAAAAASSSS" << std::endl;
 
-        textRenderer.RenderText(endText,
-            (float)SCR_WIDTH * 0.3f,
-            (float)SCR_HEIGHT * 0.8f, // Arriba
-            0.6f,
-            glm::vec3(0.8f, 0.6f, 1.0f));
+        isCompleted = true;
+
     }
 
     // --- ¡NUEVO! DIBUJAR OBJETOS TRANSPARENTES (VIDRIO) ---

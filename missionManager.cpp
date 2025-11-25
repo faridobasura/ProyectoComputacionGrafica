@@ -88,9 +88,9 @@ void MissionManager::CreateCylinderGeometry() {
 
 void MissionManager::AddMission(glm::vec3 position, float radius, std::string name) {
     MissionMarker newMission = MissionMarker(position, radius, name);
-    newMission.isActive = true;
     markers.push_back(newMission);
 }
+
 
 void MissionManager::Update(const glm::vec3& playerPosition) {
     if (currentMissionIndex >= static_cast<int>(markers.size())) {
