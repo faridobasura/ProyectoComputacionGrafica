@@ -94,13 +94,11 @@ void MissionManager::AddMission(glm::vec3 position, float radius, std::string na
 
 void MissionManager::Update(const glm::vec3& playerPosition) {
     if (currentMissionIndex >= static_cast<int>(markers.size())) {
-        std::cout << "No hay misiones o todas completadas" << std::endl;
         return;
     }
 
     MissionMarker& currentMarker = markers[currentMissionIndex];
     if (!currentMarker.isActive) {
-        std::cout << "Misión actual no está activa: " << currentMarker.name << std::endl;
         return;
     }
 
@@ -121,6 +119,13 @@ std::string MissionManager::GetCurrentMissionName() const {
 void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
     if (!markerShader) return;
 
+    // GUARDAR ESTADOS ACTUALES
+    GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
+    GLboolean wasCullEnabled = glIsEnabled(GL_CULL_FACE);
+    GLint prevDepthMask;
+    glGetIntegerv(GL_DEPTH_WRITEMASK, &prevDepthMask);
+
     markerShader->use();
     markerShader->setMat4("projection", projection);
     markerShader->setMat4("view", view);
@@ -128,6 +133,8 @@ void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
 
     for (const auto& marker : markers) {
         if (!marker.isActive) continue;
@@ -135,17 +142,25 @@ void MissionManager::Render(glm::mat4 projection, glm::mat4 view) {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, marker.position);
         markerShader->setMat4("model", model);
-        markerShader->setVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 0.09f));
+        markerShader->setVec4("color", glm::vec4(1.0f, 1.0f, 0.0f, 0.5f));
 
         glBindVertexArray(cylinderVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 34); // 2 * (16 + 1) = 34 vértices
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 34);
     }
 
     glBindVertexArray(0);
-    glEnable(GL_CULL_FACE);
-    glDisable(GL_BLEND);
-}
 
+    // RESTAURAR ESTADOS ORIGINALES
+    glDepthMask(prevDepthMask);
+
+    if (wasCullEnabled) glEnable(GL_CULL_FACE);
+    else glDisable(GL_CULL_FACE);
+
+    if (!wasBlendEnabled) glDisable(GL_BLEND);
+
+    if (wasDepthEnabled) glEnable(GL_DEPTH_TEST);
+    else glDisable(GL_DEPTH_TEST);
+}
 void MissionManager::CompleteMission(std::string missionName) {
     // Buscar la misión por nombre
     for (int i = 0; i < markers.size(); ++i) {

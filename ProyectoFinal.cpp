@@ -201,8 +201,8 @@ glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0
 float       thirdpersonOffset = 2.0f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
-float walkSpeed = 0.1f;
-float runSpeed = 0.3f;
+float walkSpeed = 0.2f;
+float runSpeed = 0.4f;
 float       scaleV = walkSpeed;
 
 float characterHeight = 2.0f;      // Altura del personaje
@@ -604,6 +604,16 @@ void UpdateCameras() {
 // Función para dibujar un rectángulo de fondo
 void DrawQuad(float x, float y, float width, float height, glm::vec4 color, glm::mat4 projection)
 {
+
+    // Guardar estados actuales
+    GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
+
+    // Configurar para 2D
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // Vértices del quad (rectángulo)
     float vertices[] = {
         // Posiciones
@@ -655,6 +665,10 @@ void DrawQuad(float x, float y, float width, float height, glm::vec4 color, glm:
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &quadVBO);
     glDeleteBuffers(1, &quadEBO);
+
+    // Restaurar estados
+    if (wasDepthEnabled) glEnable(GL_DEPTH_TEST);
+    if (!wasBlendEnabled) glDisable(GL_BLEND);
 }
 
 // Función para mostrar lista de lugares visitados
@@ -904,9 +918,6 @@ bool Start() {
 
     initGrass();
 
-    // textManager.textShaderID = textShaderID; // Esto es de TextManager, no de TextRenderer
-
-
     if (!glfwGetCurrentContext()) {
         std::cerr << "Error: No hay un contexto de OpenGL activo antes de inicializar TextRenderer\n";
     }
@@ -1152,14 +1163,16 @@ bool Start() {
         std::cout << "Error inicializando sistema de misiones" << std::endl;
     }
 
-    // Añadir misiones
    
     g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.2f), 4.0f, "Xiucoatl");
-    g_missionManager.AddMission(piramidePos + glm::vec3(0.0f, 0.0f, 6.3f), 3.0f, "Piramides");
+    g_missionManager.AddMission(piramidePos + glm::vec3(0.0f, 0.0f, 6.7f), 3.0f, "Piramides");
     g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 18.0f), 4.0f, "PiedraSol");
-    g_missionManager.AddMission(XochipilliPos + glm::vec3(-3.2f, 0.0f, 0.0f), 4.0f, "Xochipilli");
-    g_missionManager.AddMission(CoatlicuePos + glm::vec3(3.2f, 0.0f, 0.0f), 4.0f, "Coatlicue");
-
+    g_missionManager.AddMission(XochipilliPos + glm::vec3(-4.0f, 0.0f, 0.0f), 4.0f, "Xochipilli");
+    g_missionManager.AddMission(CoatlicuePos + glm::vec3(4.0f, 0.0f, 0.0f), 4.0f, "Coatlicue");
+    g_missionManager.AddMission(PlatoAntiguoPos + glm::vec3(0.0f, 2.0f, -3.0f), 4.0f, "PlatoAntiguo");
+    g_missionManager.AddMission(CraneoPos + glm::vec3(0.0f, 2.0f, 2.5f), 3.0f, "Craneo");
+    g_missionManager.AddMission(IncenciarioPos + glm::vec3(0.0f, 0.0f, 5.0f), 4.0f, "Incenciario");
+    g_missionManager.AddMission(BraceroPos + glm::vec3(0.0f, 0.0f, -3.0f), 4.0f, "Bracero");
 
     return true;
 }
@@ -1316,20 +1329,19 @@ bool Update() {
     {
         if (activeCamera == 0) {
             // Cámara flotante
-            projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
+            projection = glm::perspective(glm::radians(camera_float.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 300.0f);
             view = camera_float.GetViewMatrix();
         }
         else if (activeCamera == 1) {
             // Cámara en tercera persona
-            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
+            projection = glm::perspective(glm::radians(camera3rd.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 300.0f);
             view = camera3rd.GetViewMatrix();
         }
         else if (activeCamera == 2) {
             // Cámara en primera persona
-            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f); // <-- CORREGIDO
+            projection = glm::perspective(glm::radians(camera1st.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 300.0f); // <-- CORREGIDO
             view = camera1st.GetViewMatrix();
         }
-        g_missionManager.Render(projection, view);
     }
     // --- FIN DE CÁLCULO DE CÁMARA ---
 
@@ -1443,6 +1455,8 @@ bool Update() {
         }
     }
 
+    g_missionManager.Render(projection, view);
+
     //Dibujo de cajas para debug
     if (showCollisionBoxes) {
         if (!debugShader || debugShader->ID == 0) {
@@ -1497,7 +1511,16 @@ bool Update() {
     g_missionManager.Update(character_position);
 
     if (g_missionManager.AllMissionsCompleted()) {
-        std::cout << "Misiones Completadas" << std::endl;
+        std::string endText =
+            "FELICIDADES\n"
+            "TERMINASTE EL RECORRIDO\n";
+        std::cout << "MISIONES TERMINADAAAAASSSS" << std::endl;
+
+        textRenderer.RenderText(endText,
+            (float)SCR_WIDTH * 0.3f,
+            (float)SCR_HEIGHT * 0.8f, // Arriba
+            0.6f,
+            glm::vec3(0.8f, 0.6f, 1.0f));
     }
 
     // --- ¡NUEVO! DIBUJAR OBJETOS TRANSPARENTES (VIDRIO) ---
@@ -1920,17 +1943,17 @@ void processInput(GLFWwindow* window)
     if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
         if (character_run == true) {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(FORWARD, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(FORWARD, deltaTime * 13.0f);
             if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(BACKWARD, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(BACKWARD, deltaTime * 13.0f);
             if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(LEFT, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(LEFT, deltaTime * 13.0f);
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(RIGHT, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(RIGHT, deltaTime * 13.0f);
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-                camera_float.ProcessKeyboard(UP, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(UP, deltaTime * 13.0f);
             if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) // La 'E' solo mueve la cámara flotante
-                camera_float.ProcessKeyboard(DOWN, deltaTime * 8.0f);
+                camera_float.ProcessKeyboard(DOWN, deltaTime * 13.0f);
         }
         else {
             if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
