@@ -12,6 +12,7 @@ private:
         float radius;
         bool isActive;
         bool isCompleted;
+        std::vector<MissionMarker> markers;
         std::string name;  // NUEVO: nombre de la misión
 
         MissionMarker(glm::vec3 pos, float rad = 2.0f, std::string missionName = "")
@@ -36,11 +37,12 @@ public:
     void Update(const glm::vec3& playerPosition);
     void Render(glm::mat4 projection, glm::mat4 view);
     void CompleteMission(std::string);
+    void ResetAllMissions();
     bool AllMissionsCompleted() const;
     int GetCurrentMissionIndex() const { return currentMissionIndex; }
     int GetTotalMissions() const { return markers.size(); }
     int GetCompletedMissions() const;
-    bool IsMissionActive(int index) const;
+    bool IsMissionActive(const std::string& missionName) const;
     bool IsMissionCompleted(int index) const;
     std::string GetCurrentMissionName() const;
 };

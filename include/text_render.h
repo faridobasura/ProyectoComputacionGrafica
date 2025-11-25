@@ -14,12 +14,14 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+
 struct Character {
     GLuint TextureID;
     glm::ivec2 Size;
     glm::ivec2 Bearing;
     GLuint Advance;
 };
+
 
 class TextRenderer {
 public:
@@ -30,6 +32,9 @@ public:
 
     TextRenderer() {}
 
+    // ============================================================
+    // INIT
+    // ============================================================
     void Init(GLuint shader, int width, int height, const std::string& fontPath) {
         shaderID = shader;
         screenWidth = width;
@@ -78,7 +83,7 @@ public:
         FT_Done_Face(face);
         FT_Done_FreeType(ft);
 
-        // --- 🔧 Generación correcta del VAO y VBO ---
+        // --- Crear VAO / VBO ---
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
@@ -86,16 +91,74 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 4, nullptr, GL_DYNAMIC_DRAW);
 
-
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-
         glBindVertexArray(0);
-
     }
 
+
+    // ============================================================
+    // 🔥 FUNCIONES NUEVAS - MEDIR TEXTO ANTES DE RENDERIZAR
+    // ============================================================
+
+    float MeasureTextWidth(const std::string& text, float scale) {
+        float width = 0.0f;
+
+        for (char c : text) {
+            if (c == '\n') break; // solo mide primera línea
+            Character ch = Characters[c];
+            width += (ch.Advance >> 6) * scale;
+        }
+
+        return width;
+    }
+
+    float MeasureTextHeight(float scale) {
+        Character H = Characters['H'];
+        return H.Size.y * scale * 1.35f;  // altura real evitando traslapes
+    }
+
+    glm::vec2 MeasureTextBlock(const std::string& text, float scale) {
+        float maxWidth = 0.0f;
+        float totalHeight = 0.0f;
+
+        float currentWidth = 0.0f;
+        float lineHeight = MeasureTextHeight(scale);
+
+        for (char c : text) {
+            if (c == '\n') {
+                totalHeight += lineHeight;
+                maxWidth = std::max(maxWidth, currentWidth);
+                currentWidth = 0;
+                continue;
+            }
+
+            Character ch = Characters[c];
+            currentWidth += (ch.Advance >> 6) * scale;
+        }
+
+        totalHeight += lineHeight;
+        maxWidth = std::max(maxWidth, currentWidth);
+
+        return glm::vec2(maxWidth, totalHeight);
+    }
+
+
+    // ============================================================
+    // 🔥 Ajustar automáticamente el tamaño de la ventana o layout
+    // ============================================================
+    void AutoScaleToText(const std::string& text, float scale, int& outW, int& outH) {
+        glm::vec2 size = MeasureTextBlock(text, scale);
+        outW = (int)size.x + 20;  // padding
+        outH = (int)size.y + 20;  // padding
+    }
+
+
+    // ============================================================
+    // RENDER DE TEXTO
+    // ============================================================
     void RenderText(const std::string& text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color) {
         glUseProgram(shaderID);
         glUniform3f(glGetUniformLocation(shaderID, "textColor"), color.x, color.y, color.z);
@@ -106,13 +169,13 @@ public:
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(VAO);
 
-        GLfloat startX = x; 
-        GLfloat currentY = y; 
+        GLfloat startX = x;
+        GLfloat currentY = y;
 
-        GLfloat lineHeight = Characters['H'].Size.y * scale * ((float)screenHeight * 0.002);
-            
+        float lineHeight = MeasureTextHeight(scale);
+
         for (auto c : text) {
-            
+
             if (c == '\n') {
                 x = startX;
                 currentY -= lineHeight;
@@ -120,8 +183,10 @@ public:
             }
 
             Character ch = Characters[c];
+
             GLfloat xpos = x + ch.Bearing.x * scale;
             GLfloat ypos = currentY - (ch.Size.y - ch.Bearing.y) * scale;
+
             GLfloat w = ch.Size.x * scale;
             GLfloat h = ch.Size.y * scale;
 
@@ -138,9 +203,9 @@ public:
             glBindTexture(GL_TEXTURE_2D, ch.TextureID);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
 
             glDrawArrays(GL_TRIANGLES, 0, 6);
+
             x += (ch.Advance >> 6) * scale;
         }
 

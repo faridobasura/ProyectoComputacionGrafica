@@ -49,6 +49,20 @@ bool MissionManager::Initialize() {
     return true;
 }
 
+void MissionManager::ResetAllMissions() {
+    for (auto& marker : markers) {
+        marker.isCompleted = false;
+        marker.isActive = false;
+    }
+
+    if (!markers.empty()) {
+        markers[0].isActive = true;
+        currentMissionIndex = 0;
+    }
+
+    std::cout << "Todas las misiones han sido reiniciadas" << std::endl;
+}
+
 void MissionManager::CreateCylinderGeometry() {
     const int segments = 16;
     const float height = 3.0f;
@@ -101,13 +115,6 @@ void MissionManager::Update(const glm::vec3& playerPosition) {
     if (!currentMarker.isActive) {
         return;
     }
-
-    //float distance = glm::distance(playerPosition, currentMarker.position);
-
-    //if (distance < currentMarker.radius) {
-    //    std::cout << "¡Misión completada por proximidad: " << currentMarker.name << "!" << std::endl;
-    //    CompleteCurrentMission();
-    //}
 }
 std::string MissionManager::GetCurrentMissionName() const {
     if (currentMissionIndex < static_cast<int>(markers.size())) {
@@ -169,14 +176,11 @@ void MissionManager::CompleteMission(std::string missionName) {
             markers[i].isCompleted = true;
             markers[i].isActive = false;
 
-            std::cout << "Misión completada por nombre: " << missionName << std::endl;
-
             // Si era la misión actual, activar la siguiente
             if (i == currentMissionIndex) {
                 currentMissionIndex++;
                 if (currentMissionIndex < static_cast<int>(markers.size())) {
                     markers[currentMissionIndex].isActive = true;
-                    std::cout << "Nueva misión activada: " << markers[currentMissionIndex].name << std::endl;
                 }
                 else {
                     std::cout << "¡Todas las misiones completadas!" << std::endl;
@@ -202,9 +206,11 @@ int MissionManager::GetCompletedMissions() const {
     return completed;
 }
 
-bool MissionManager::IsMissionActive(int index) const {
-    if (index >= 0 && index < static_cast<int>(markers.size())) {
-        return markers[index].isActive;
+bool MissionManager::IsMissionActive(const std::string& missionName) const {
+    for (const auto& marker : markers) {
+        if (marker.name == missionName) {
+            return marker.isActive;
+        }
     }
     return false;
 }

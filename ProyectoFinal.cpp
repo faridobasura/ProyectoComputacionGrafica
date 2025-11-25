@@ -5,7 +5,8 @@
 #include <sstream> // Necesario para SetLightUniform...
 #include <vector>  // Para usar std::vector
 #include <string>  // Para usar std::string
-#include <unordered_map> // Mapas para el sistema de logros o vistas
+#include <map> // Mapas para el sistema de logros o vistas
+#include<list>
 
 // GLAD: Multi-Language GL/GLES/EGL/GLX/WGL Loader-Generator
 // https://glad.dav1d.de/
@@ -13,7 +14,6 @@
 
 // Cargar antes glew
 #include <text_render.h>
-#include <TextManager.h> // <-- Declarado pero no usado, lo dejo por si acaso
 #include "MissionManager.h"
 
 // GLFW: https://www.glfw.org/
@@ -124,10 +124,11 @@ struct Door {
 struct Achievement {
     std::string name;
     bool unlocked;
-    Achievement(const std::string& n = "", bool u = false) : name(n), unlocked(u) {}
+    int displayOrder;
+    Achievement(const std::string& n = "", bool u = false, int o = 0) : name(n), unlocked(u), displayOrder(o) {}
 };
 
-std::unordered_map<std::string, Achievement> g_achievements;
+std::map<std::string, Achievement> g_achievements;
 
 bool g_showAchievement = false;
 std::string g_lastAchievementName = "";
@@ -187,7 +188,6 @@ bool g_g_keyPressed = false;          // Para la tecla 'G'
 float g_inspectZoom = 45.0f;
 
 TextRenderer textRenderer; // <-- Corregido
-TextManager textManager(textRenderer, 1024, 768); // <-- Declarado, pero no usado
 
 // Tamaño en pixeles de la ventana
 const unsigned int SCR_WIDTH = 1024;
@@ -201,8 +201,8 @@ glm::vec3 rightView = glm::normalize(glm::cross(forwardView, glm::vec3(0.0f, 1.0
 float       thirdpersonOffset = 2.0f;
 float       rotateCharacter = 180.0f;
 bool character_run = false;
-float walkSpeed = 0.2f;
-float runSpeed = 0.4f;
+float walkSpeed = 0.13f;
+float runSpeed = 0.25f;
 float       scaleV = walkSpeed;
 
 float characterHeight = 2.0f;      // Altura del personaje
@@ -233,8 +233,10 @@ AABB characterBoundingBox;
 unsigned int debugVAO, debugVBO;
 bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
 bool showHelp = false; // Variable para mostrar/ocultar ayuda
+std::list<std::string> g_HelpText;
+std::string helpTitle = "CONTROLES DEL JUEGO";
 
-bool isCompleted = false;
+bool isInteracting;
 
 glm::vec3 position(0.0f, 0.0f, 0.0f);
 glm::vec3 position_origin(0.0f, 0.0f, 0.0f);
@@ -365,25 +367,8 @@ int main()
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
-        if (!isCompleted) {
-
-            if (!Update())
-                break;
-        }
-        else {
-            if (g_missionManager.AllMissionsCompleted()) {
-                std::string endText =
-                    "FELICIDADES\n"
-                    "TERMINASTE EL RECORRIDO\n";
-
-                textRenderer.RenderText(endText,
-                    (float)SCR_WIDTH * 0.3f,
-                    (float)SCR_HEIGHT * 0.8f, // Arriba
-                    0.6f,
-                    glm::vec3(0.8f, 0.6f, 1.0f));
-            }
-        }
-
+        if (!Update())
+            break;
     }
 
     glfwTerminate();
@@ -474,6 +459,23 @@ void renderGrass() {
     while ((err = glGetError()) != GL_NO_ERROR) {
         std::cout << "OpenGL error: " << err << std::endl;
     }
+}
+void InitializeHelpText() {
+    g_HelpText.clear();
+    g_HelpText.push_back("F1 - CAMARA FLOTANTE");
+    g_HelpText.push_back("F2 - CAMARA 3ERA PERSONA");
+    g_HelpText.push_back("F3 - CAMARA 1ERA PERSONA");
+    g_HelpText.push_back("C - MODO DEBUG");
+    g_HelpText.push_back("SHIFT - CORRER");
+    g_HelpText.push_back("FLECHAS - DESPLAZARTE (PERSONAJE)");
+    g_HelpText.push_back("WASD - DESPLAZARTE (CAMARA FLOTANTE)");
+    g_HelpText.push_back("H - MOSTRAR/OCULTAR AYUDA");
+    g_HelpText.push_back("TAB - REINICIAR JUEGO");
+    g_HelpText.push_back("1 - MOSTRAR/OCULTAR PANEL DE VISITAS");
+    g_HelpText.push_back("F - INTERACTUAR CON OBJETOS");
+    g_HelpText.push_back("G - VER DESCRIPCION DE OBJETOS");
+    g_HelpText.push_back("Y - ROTAR OBJETOS");
+    g_HelpText.push_back("E - USAR PUERTAS");
 }
 
 
@@ -694,9 +696,9 @@ void DrawQuad(float x, float y, float width, float height, glm::vec4 color, glm:
 void DrawAchievementsWindow()
 {
     // ======= CONFIGURACIÓN INICIAL =======
-    float margin = 10.0f;  // Margen desde el borde de la pantalla
+    float margin = 20.0f;  // Margen desde el borde de la pantalla
     float x = SCR_WIDTH - 330.0f - margin;  // Posición X del texto
-    float y = SCR_HEIGHT - 50.0f;           // Posición Y del texto (desde arriba)
+    float y = SCR_HEIGHT - 30.0f;           // Posición Y del texto (desde arriba)
 
     float bgWidth = 330.0f;
     int totalAchievements = g_achievements.size();
@@ -704,7 +706,7 @@ void DrawAchievementsWindow()
 
     // Posición del fondo en coordenadas de OpenGL (desde abajo)
     float bgX = x - 10.0f;
-    float bgY = y - bgHeight + 330.0f;  // Ajuste para que el fondo esté detrás del texto
+    float bgY = y - bgHeight + 330.0f;  
 
     // Proyección ortográfica para el fondo
     glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH, 0.0f, (float)SCR_HEIGHT);
@@ -775,10 +777,20 @@ void DrawAchievementsWindow()
     textRenderer.RenderText(counter, counterX + 20.0f, textY + 15.0f, 0.5f, glm::vec3(0.9f, 0.9f, 1.0f));
 
     textY -= 35.0f;
+    // ======= ORDENAR LOS LOGROS =======
+    std::vector<std::pair<std::string, Achievement>> sortedAchievements(
+        g_achievements.begin(), g_achievements.end()
+    );
+
+    std::sort(sortedAchievements.begin(), sortedAchievements.end(),
+        [](const auto& a, const auto& b) {
+            return a.second.displayOrder < b.second.displayOrder;
+        });
+
 
     // Lista de logros
     int index = 0;
-    for (const auto& pair : g_achievements) {
+    for (const auto& pair : sortedAchievements) {
         // Fondo alternado para cada logro
         if (index % 2 == 0) {
             glm::vec4 itemBgColor = glm::vec4(0.12f, 0.10f, 0.15f, 0.5f);
@@ -800,82 +812,151 @@ void DrawAchievementsWindow()
         textY -= 24.0f;
         index++;
     }
+
 }
 
 // Función para popup de información
-void DrawAchievementPopup()
+void DrawPopup(const std::string& title,
+    const std::string& popUpText,
+    float posX,
+    float posY)
 {
-    if (!g_showAchievement) return;
-
     glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH, 0.0f, (float)SCR_HEIGHT);
 
-    // ======= CONFIGURACIÓN =======
-    float popupWidth = 250.0f;
-    float popupHeight = 80.0f;
-    float margin = 10.0f;
+    float titleScale = 0.55f;
+    float textScale = 0.40f;
 
-    float x = SCR_WIDTH - popupWidth - margin;
-    float y = popupHeight + margin;
+    glm::vec2 textSize = textRenderer.MeasureTextBlock(popUpText, textScale);
 
-    // Fondo oscuro con más opacidad
+    float titleWidth = textRenderer.MeasureTextWidth(title, titleScale);
+    float titleHeight = textRenderer.MeasureTextHeight(titleScale);
+
+    // El popup debe tomar el más ancho
+    float maxWidth = std::max(textSize.x, titleWidth);
+
+    float paddingX = 20.0f;
+    float paddingY = 20.0f;
+
+    float popupWidth = maxWidth + paddingX * 2.0f;
+    float popupHeight = paddingY * 2.0f +   // márgenes
+        titleHeight + 10.0f +  // espacio bajo el título
+        textSize.y;            // alto total del bloque de texto
+
+    float x = posX;
+    float y = posY + popupHeight;
+
     glm::vec4 bgColor = glm::vec4(0.05f, 0.05f, 0.1f, 0.9f);
     DrawQuad(x, y, popupWidth, popupHeight, bgColor, projection);
 
-    // Borde dorado brillante
-    glm::vec4 borderColor = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);
     float borderThickness = 3.0f;
+    glm::vec4 borderColor = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);
 
-    //Superior
-    DrawQuad(x - borderThickness, y + borderThickness, popupWidth + borderThickness * 2,
+    DrawQuad(x - borderThickness, y + borderThickness,
+        popupWidth + borderThickness * 2,
         borderThickness, borderColor, projection);
-    //Inferior   
-    DrawQuad(x - borderThickness, y - popupHeight, popupWidth + borderThickness * 2,
+
+    DrawQuad(x - borderThickness, y - popupHeight,
+        popupWidth + borderThickness * 2,
         borderThickness, borderColor, projection);
-    //Izquierdo
-    DrawQuad(x - borderThickness, y + borderThickness, borderThickness,
+
+    DrawQuad(x - borderThickness, y + borderThickness,
+        borderThickness,
         popupHeight + borderThickness * 2, borderColor, projection);
-    //Derecho
-    DrawQuad(x + popupWidth, y + borderThickness, borderThickness, popupHeight + borderThickness * 2,
-        borderColor, projection);
-    // ======= FIN FONDO POPUP =======
 
-    float textX = x + 15.0f;
-    float textY = y - 20.0f;
+    DrawQuad(x + popupWidth, y + borderThickness,
+        borderThickness,
+        popupHeight + borderThickness * 2, borderColor, projection);
+
+    float textX = x + paddingX;
+    float textY = y - paddingY;
+
+    // ----- Título -----
+    float alpha = (sin(glfwGetTime() * 3.0f) + 1.0f) * 0.5f;
+    glm::vec3 glowColor = glm::vec3(1.0f, 0.85f + alpha * 0.15f, 0.3f);
+
+    textRenderer.RenderText(title, textX, textY, titleScale, glowColor);
+
+    // Línea de texto inicia bajo el título
+    float currentY = textY - titleHeight - 10.0f;
+
+    float lineHeight = textRenderer.MeasureTextHeight(textScale);
+
+    std::stringstream ss(popUpText);
+    std::string line;
+
+    while (std::getline(ss, line, '\n'))
+    {
+        textRenderer.RenderText(line, textX, currentY, textScale, glm::vec3(1.0f));
+        currentY -= lineHeight;
+    }
+}
+
+void DrawHelpWindow() {
+
+    // ======= CONFIGURACIÓN INICIAL =======
+    float margin = 20.0f;
+    float x = margin;
+    float y = SCR_HEIGHT - 20.0f;
+
+    // Calcular dimensiones basadas en la lista
+    int totalHelpItems = g_HelpText.size();
+    float lineHeight = 24.0f;
+    float titleHeight = 35.0f;
+    float padding = 15.0f;
+
+    float bgWidth = 350.0f;
+    float bgHeight = titleHeight + (totalHelpItems * lineHeight) + (padding * 2);
+
+    // Posición del fondo
+    float bgX = x - 10.0f;
+    float bgY = y - bgHeight + 375.0f;
+
+    // Proyección ortográfica
+    glm::mat4 projection = glm::ortho(0.0f, (float)SCR_WIDTH, 0.0f, (float)SCR_HEIGHT);
+
+    // ======= DIBUJAR FONDO =======
+    glm::vec4 bgColor = glm::vec4(0.1f, 0.1f, 0.15f, 0.92f);
+    DrawQuad(bgX, bgY, bgWidth, bgHeight, bgColor, projection);
+
+    // Borde
+    glm::vec4 borderColor = glm::vec4(1.0f, 0.75f, 0.2f, 0.95f);
+    float borderThickness = 2.0f;
+
+    DrawQuad(bgX - borderThickness, bgY + bgHeight, bgWidth + 2 * borderThickness, borderThickness, borderColor, projection); // Superior
+    DrawQuad(bgX - borderThickness, bgY - borderThickness, bgWidth + 2 * borderThickness, borderThickness, borderColor, projection); // Inferior
+    DrawQuad(bgX - borderThickness, bgY, borderThickness, bgHeight, borderColor, projection); // Izquierdo
+    DrawQuad(bgX + bgWidth, bgY, borderThickness, bgHeight, borderColor, projection); // Derecho
+
+    // ======= CONTENIDO DE TEXTO =======
+    float textY = y - 10.0f;
 
     // Título
-    std::string title = "Sitio visitado";
-    //float titleWidth = title.length() * 20.0f;
-    textRenderer.RenderText(
-        title,
-        textX,
-        textY + 25.0f,
-        0.65f,
-        glm::vec3(1.0f, 0.85f, 0.2f)
-    );
+    textRenderer.RenderText(helpTitle, x + 2.0f, textY - 8.0f, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f)); // Sombra
+    textRenderer.RenderText(helpTitle, x, textY - 6.0f, 0.5f, glm::vec3(1.0f, 0.85f, 0.3f)); // Título
 
-    // Nombre del logro con ajuste de escala si es muy largo
-    float baseScale = 0.4f;
-    float maxWidth = popupWidth - 30.0f;
-    float estimatedWidth = g_lastAchievementName.length() *
-        (11.0f * baseScale);
+    textY -= 35.0f;
 
-    float finalScale = baseScale;
-    if (estimatedWidth > maxWidth) {
-        finalScale = maxWidth / (11.0f * g_lastAchievementName.length());
+    // Línea separadora
+    glm::vec4 separatorColor = glm::vec4(0.8f, 0.6f, 0.2f, 0.8f);
+    DrawQuad(bgX + 8.0f, textY + 5.0f, bgWidth - 16.0f, 1.5f, separatorColor, projection);
+
+    textY -= 15.0f;
+
+    // Lista de controles
+    int index = 0;
+    for (const auto& helpLine : g_HelpText) {
+        // Fondo alternado para mejor legibilidad
+        if (index % 2 == 0) {
+            glm::vec4 itemBgColor = glm::vec4(0.12f, 0.10f, 0.15f, 0.5f);
+            DrawQuad(bgX + 8.0f, textY - 7.0f, bgWidth - 16.0f, 20.0f, itemBgColor, projection);
+        }
+
+        // Texto
+        textRenderer.RenderText(helpLine, x, textY, 0.35f, glm::vec3(0.9f, 0.9f, 1.0f));
+
+        textY -= lineHeight;
+        index++;
     }
-
-    textRenderer.RenderText(
-        g_lastAchievementName,
-        textX,
-        textY - 8.5f,
-        finalScale,
-        glm::vec3(1.0f)
-    );
-
-    // Efecto de parpadeo
-    float alpha = (sin(glfwGetTime() * 3.0f) + 1.0f) * 0.5f;
-    glm::vec3 glowColor = glm::vec3(1.0f, 0.85f + alpha * 0.15f, 0.2f);
-
 }
 
 //---- FIN FUNCIONES PANEL DE INFORMACIÓN ----//
@@ -951,6 +1032,7 @@ bool Start() {
     }
 
     CreateDebugCube();
+    InitializeHelpText();
 
     // Máximo número de huesos: 100
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
@@ -1168,28 +1250,26 @@ bool Start() {
     InitializeCollidableObjects();   
 
 	// -- Inicialización de lugares por visitar --
-    g_achievements["Xiucoatl"] = Achievement("Conociste a Xiucoatl", false);
-    g_achievements["Piramides"] = Achievement("Entraste a las Piramides", false);
-    g_achievements["PiedraSol"] = Achievement("Descubriste la Piedra del Sol", false);
-    g_achievements["Bracero"] = Achievement("Exploraste el Bracero", false);
-
-    g_achievements["Xochipilli"] = Achievement("Visitaste a Xochipilli", false);
-    g_achievements["Incenciario"] = Achievement("Revisaste el Incensario", false);
-
-    g_achievements["Craneo"] = Achievement("Examinaste el Craneo", false);
-    g_achievements["Coatlicue"] = Achievement("Observaste a Coatlicue", false);
-    g_achievements["PlatoAntiguo"] = Achievement("Encontraste el Plato Antiguo", false);
+    g_achievements["Xiucoatl"] = Achievement("Conociste a Xiucoatl", false,1);
+    g_achievements["Piramides"] = Achievement("Entraste a las Piramides", false,2);
+    g_achievements["PiedraSol"] = Achievement("Descubriste la Piedra del Sol", false,3);
+    g_achievements["Bracero"] = Achievement("Exploraste el Bracero", false,4);
+    g_achievements["Xochipilli"] = Achievement("Visitaste a Xochipilli", false,5);
+    g_achievements["Incenciario"] = Achievement("Revisaste el Incensario", false,6);
+    g_achievements["Craneo"] = Achievement("Examinaste el Craneo", false,7);
+    g_achievements["PlatoAntiguo"] = Achievement("Encontraste el Plato Antiguo", false,8);
+    g_achievements["Coatlicue"] = Achievement("Observaste a Coatlicue", false, 9);
     
     
     g_missionManager.AddMission(xiucoatlPos + glm::vec3(0.0f, 0.0f, 6.2f), 4.0f, "Xiucoatl");
     g_missionManager.AddMission(piramidePos + glm::vec3(0.0f, 0.0f, 6.7f), 3.0f, "Piramides");
     g_missionManager.AddMission(PiedraSolPos + glm::vec3(0.0f, 0.0f, 18.0f), 4.0f, "PiedraSol");
-    g_missionManager.AddMission(XochipilliPos + glm::vec3(-4.0f, 0.0f, 0.0f), 4.0f, "Xochipilli");
-    g_missionManager.AddMission(CoatlicuePos + glm::vec3(4.0f, 0.0f, 0.0f), 4.0f, "Coatlicue");
-    g_missionManager.AddMission(PlatoAntiguoPos + glm::vec3(0.0f, 2.0f, -3.0f), 4.0f, "PlatoAntiguo");
-    g_missionManager.AddMission(CraneoPos + glm::vec3(0.0f, 2.0f, 2.5f), 3.0f, "Craneo");
-    g_missionManager.AddMission(IncenciarioPos + glm::vec3(0.0f, 0.0f, 5.0f), 4.0f, "Incenciario");
     g_missionManager.AddMission(BraceroPos + glm::vec3(0.0f, 0.0f, -3.0f), 4.0f, "Bracero");
+    g_missionManager.AddMission(XochipilliPos + glm::vec3(-4.0f, 0.0f, 0.0f), 4.0f, "Xochipilli");
+    g_missionManager.AddMission(IncenciarioPos + glm::vec3(0.0f, 0.0f, 5.0f), 4.0f, "Incenciario");
+    g_missionManager.AddMission(CraneoPos + glm::vec3(0.0f, 2.0f, 2.5f), 3.0f, "Craneo");
+    g_missionManager.AddMission(PlatoAntiguoPos + glm::vec3(0.0f, 2.0f, -3.0f), 4.0f, "PlatoAntiguo");
+    g_missionManager.AddMission(CoatlicuePos + glm::vec3(4.0f, 0.0f, 0.0f), 4.0f, "Coatlicue");
 
 
     if (!g_missionManager.Initialize()) {
@@ -1197,6 +1277,59 @@ bool Start() {
     }
 
     return true;
+}
+
+void Reset()
+{
+    // Reiniciar posición del personaje
+    character_position = glm::vec3(0.0f, 0.0f, 35.0f);
+    rotateCharacter = 180.0f;
+
+    // ¡IMPORTANTE! Restaurar velocidades
+    walkSpeed = 0.2f;  // Valor original
+    runSpeed = 0.4f;   // Valor original
+
+    // ¡IMPORTANTE! Restaurar estados de UI
+    showHelp = true;      // O el valor por defecto que prefieras
+    showInfoPanel = true; // O el valor por defecto que prefieras
+
+    // Reiniciar cámaras
+    UpdateCameras();
+
+    // Reiniciar estado de interacción
+    g_interactingObject = nullptr;
+    g_nearbyObject = nullptr;
+    g_isInspectingInfoStand = false;
+
+    // Reiniciar puertas
+    for (auto& door : g_doors) {
+        door.state = CLOSED;
+        door.animProgress = 0.0f;
+        door.currentPosition = door.initialPosition;
+    }
+
+    // Reiniciar misiones
+    g_missionManager.ResetAllMissions();
+
+    // Reiniciar logros
+    for (auto& pair : g_achievements) {
+        pair.second.unlocked = false;
+    }
+
+    // Reiniciar sonido
+    if (currentSound) {
+        SoundEngine->stopAllSounds();
+        currentSound = false;
+    }
+
+    // Reiniciar rotaciones de objetos interactivos
+    for (auto& obj : g_interactiveObjects) {
+        obj.inspectRotationY = 0.0f;
+        obj.inspectRotationX = 0.0f;
+        obj.isAutoRotatingY = false;
+    }
+
+    std::cout << "Juego reiniciado!" << std::endl;
 }
 
 
@@ -1478,6 +1611,7 @@ bool Update() {
     }
 
     g_missionManager.Render(projection, view);
+    
 
     //Dibujo de cajas para debug
     if (showCollisionBoxes) {
@@ -1532,12 +1666,6 @@ bool Update() {
 
     g_missionManager.Update(character_position);
 
-    if (g_missionManager.AllMissionsCompleted()) {
-
-        isCompleted = true;
-
-    }
-
     // --- ¡NUEVO! DIBUJAR OBJETOS TRANSPARENTES (VIDRIO) ---
     // (Debe ir DESPUÉS del personaje y ANTES del texto)
     {
@@ -1588,6 +1716,8 @@ bool Update() {
             glassShader->setMat4("model", model);
             door.model->Draw(*glassShader);
         }
+
+        glDisable(GL_BLEND);
     }
     // --- FIN DEL BLOQUE DE VIDRIO ---
 
@@ -1600,54 +1730,63 @@ bool Update() {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         if (showHelp) {
-            std::string helpText =
-                "F1 - CAMARA FLOTANTE\n"
-                "F2 - CAMARA 3ERA PERSONA\n"
-                "F3 - CAMARA 1ERA PERSONA\n"
-                "C - MODO DEBUG\n"
-                "SHIFT - CORRER\n"
-                "FLECHAS - DESPLAZARTE (PERSONAJE)\n"
-                "WASD - DESPLAZARTE (CAMARA FLOTANTE)\n"
-                "H - MOSTRAR/OCULTAR AYUDA";
-
-            textRenderer.RenderText(helpText,
-                (float)SCR_WIDTH * 0.01f,
-                (float)SCR_HEIGHT * 0.9f, // Arriba
-                0.4f,
-                glm::vec3(1.0f, 0.9f, 0.1f));
+            DrawHelpWindow();
         }
 
 		//LÓGICA DEL PANEL DE VISITAS 2
 		// Mostrar nuevo logro si corresponde
-        if (showInfoPanel)
-            DrawAchievementPopup();
+        if (showInfoPanel) {
+            // Título
+            std::string title = "Sitio visitado";
+            DrawPopup(title, g_lastAchievementName, 700.0f, 50.0f);
+        }
+            
 		//FIN LÓGICA DEL PANEL DE VISITAS 2
 
         if (g_interactingObject != nullptr) {
             // --- ¡MODIFICADO! Lógica de texto de inspección ---
+            std::string title = "Inspeccion.";
             if (g_isInspectingInfoStand) {
-                textRenderer.RenderText("Presiona G para volver al objeto.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-                textRenderer.RenderText("Presiona F para salir.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.15f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+                std::string popUpText = "Presiona G para volver al objeto. \n       Presiona F para salir.";
+                DrawPopup(title,popUpText, 10.0f, 200.0f);
             }
             else {
-                // --- ¡¡ESTE ES EL TEXTO QUE PEDISTE CAMBIAR!! ---
-                textRenderer.RenderText("Presiona G para leer descripcion de objeto.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-                textRenderer.RenderText("Presiona F para salir.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.15f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
-                textRenderer.RenderText("Presiona Y para rotar.", (float)SCR_WIDTH * 0.30f, (float)SCR_HEIGHT * 0.1f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+                std::string popUpText = "Presiona G para leer cartel. \n      Presiona F para salir. \n     Presiona Y para rotar.";
+                DrawPopup(title, popUpText, 20.0f, 200.0f);
             }
         }
         else if (g_nearbyObject != nullptr) {
-            textRenderer.RenderText("Presiona F para inspeccionar", (float)SCR_WIDTH * 0.40f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+            std::string title = "Inspeccion.";
+            std::string popUpText = "Presiona F para inspeccionar.";
+            DrawPopup(title, popUpText, 375.0f, 150.0f);
         }
         else if (g_isNearDoors) {
-            textRenderer.RenderText("Presiona E para usar", (float)SCR_WIDTH * 0.43f, (float)SCR_HEIGHT * 0.2f, 0.4f, glm::vec3(1.0f, 0.9f, 0.1f));
+            std::string title = "Interactuar.";
+            std::string popUpText = "Presiona E para usar.";
+            DrawPopup(title, popUpText, 400.0f, 150.0f);
+        }
+
+        if ((g_missionManager.AllMissionsCompleted()) && (g_interactingObject == nullptr)) {
+
+            std::string title = "!!!!FELICIDADES¡¡¡¡¡";
+            std::string  endText =
+                "   TERMINASTE EL RECORRIDO\n"
+                "   PRESIONA ESC PARA SALIR \n"
+                " PRESIONA TAB PARA REINICIAR \n";
+
+            DrawPopup(title, endText, 400.0f, 400.0f);
+
+            showHelp = false;
+            showInfoPanel = false;
+            walkSpeed = 0.0f;
+            runSpeed = 0.0f;
+            character_position = glm::vec3(0.0f, 0.0f, 35.0f);
         }
 
 		//LÓGICA DEL PANEL DE VISITAS 3
 		// Mostrar el número de logros obtenidos
         if (showInfoPanel)
             DrawAchievementsWindow();
-		//FIN LÓGICA DEL PANEL DE VISITAS 3
         
 
         // --- ¡IMPORTANTE! Restaurar estado ---
@@ -1921,16 +2060,6 @@ void InitializeCollidableObjects() {
                                           glm::vec3(2.0f, 8.0f, 2.0f)),
                                      glm::vec3(1.0f), 0.0f });
 
-    //CuadroInformativoXiucoatl = new Model("models/proyectofinal/CuadroInformativo.fbx");
-    //CuadroCraneo = new Model("models/proyectofinal/CuadroCraneo.fbx");
-    //CuadroPiramide = new Model("models/proyectofinal/CuadroPiramide.fbx");
-    //CuadroPlato = new Model("models/proyectofinal/CuadroPlato.fbx");
-    //CuadroCoatlicue = new Model("models/proyectofinal/CuadroCoatlicue.fbx");
-    //CuadroPiedra = new Model("models/proyectofinal/CuadroPiedra.fbx");
-    //CuadroXochipilli = new Model("models/proyectofinal/CuadroXochipilli.fbx");
-    //CuadroIncenciario = new Model("models/proyectofinal/CuadroIncenciario.fbx");
-    //CuadroBracero = new Model("models/proyectofinal/CuadroBracero.fbx");
-
 }
 
 std::string getSoundForObject(const std::string& objectName) {
@@ -1953,6 +2082,19 @@ void processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    static bool tab_keyPressed = false;
+
+    // Y este código en processInput:
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+        if (!tab_keyPressed) {
+            Reset();
+            tab_keyPressed = true;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
+        tab_keyPressed = false;
+    }
 
     // --- Controles de cámara flotante (F1) ---
     if (activeCamera == 0) { // Solo controla la cámara flotante si está activa
@@ -2055,22 +2197,21 @@ void processInput(GLFWwindow* window)
             if (g_interactingObject == nullptr && g_nearbyObject != nullptr) {
                 g_interactingObject = g_nearbyObject;
                 g_nearbyObject = nullptr;
-                std::cout << "                                                      \r";
-                std::cout << "Interactuando con " << g_interactingObject->name << ". Presiona F para salir. Presiona G para info.\n";
-                g_missionManager.CompleteMission(g_interactingObject->name);
-				//Marcar sitio como visitado
-                auto it = g_achievements.find(g_interactingObject->name);
-                if (it != g_achievements.end()) {
-                    Achievement& ach = it->second;
-                    if (!ach.unlocked) {
-                        ach.unlocked = true;
-                        g_lastAchievementName = ach.name;
-                        g_showAchievement = true;
-                        g_achievementTimer = 3.0f; // mostrar 3 segundos
-                        std::cout << "Sitio visitado: " << ach.name << std::endl;
+                if (g_missionManager.IsMissionActive(g_interactingObject->name)) {
+                    g_missionManager.CompleteMission(g_interactingObject->name);
+                    //Marcar sitio como visitado
+                    auto it = g_achievements.find(g_interactingObject->name);
+                    if (it != g_achievements.end()) {
+                        Achievement& ach = it->second;
+                        if (!ach.unlocked) {
+                            ach.unlocked = true;
+                            g_lastAchievementName = ach.name;
+                            g_showAchievement = true;
+                            g_achievementTimer = 3.0f; // mostrar 3 segundos
+                            std::cout << "Sitio visitado: " << ach.name << std::endl;
+                        }
                     }
                 }
-
 				// Reproducir sonido asociado al objeto
                 std::string soundFile = getSoundForObject(g_interactingObject->name);
                 if (!soundFile.empty()) {
@@ -2218,17 +2359,17 @@ void processInput(GLFWwindow* window)
             }
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-            rotateCharacter += 0.8f;
+            rotateCharacter += 1.5f;
             if (character_run) {
-                rotateCharacter += 2.0f;
+                rotateCharacter += 1.8f;
             }
             UpdateCameras();
         }
 
         if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-            rotateCharacter -= 0.8f;
+            rotateCharacter -= 1.5f;
             if (character_run) {
-                rotateCharacter -= 2.0f;
+                rotateCharacter -= 1.8f;
             }
             UpdateCameras();
         }
