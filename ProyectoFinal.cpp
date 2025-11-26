@@ -297,6 +297,8 @@ Model* piso_pasto;
 Model* arboles;
 Model* bancos;
 Model* grassModel;
+Model* porton;
+Model* barda;
 
 Model* edificios;
 
@@ -1061,8 +1063,8 @@ bool Start() {
     // 4. Añadir Colisión (Solo a la base, para no atravesarla)
     // Ajusta el tamaño AABB según tu modelo real
     g_collidableObjects.push_back({ fuenteBase, fuentePos,
-             AABB(glm::vec3(-12.5f, 0.0f, -11.5f),  // Min
-                  glm::vec3(10.0f, 1.5f, 11.0f)),   // Max
+             AABB(glm::vec3(-12.8f, 0.0f, -11.8f),  // Min
+                  glm::vec3(10.5f, 1.5f, 11.5f)),   // Max
              glm::vec3(1.0f), 0.0f
         });
 
@@ -1073,6 +1075,8 @@ bool Start() {
 
     arboles = new Model("models/proyectofinal/arboles.fbx");
     bancos = new Model("models/proyectofinal/bancos.fbx");
+    porton = new Model("models/proyectofinal/porton.fbx");
+    barda = new Model("models/proyectofinal/bardas.fbx");
 
     edificios = new Model("models/proyectofinal/edificios.fbx");
 
@@ -1597,6 +1601,8 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); piso_exterior->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); arboles->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); bancos->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); porton->Draw(*mLightsShader);
+            model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); barda->Draw(*mLightsShader);
 
             model = glm::mat4(1.0f); model = glm::translate(model, position_origin); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); edificios->Draw(*mLightsShader);
 
@@ -1950,17 +1956,34 @@ void InitializeCollidableObjects() {
         });
 
     //FIN IZQUIERDO
-    g_collidableObjects.push_back({ museo, glm::vec3(-17.5f, 0.0f, 0.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(-19.0f, 0.0f, 0.0f),
          AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
                glm::vec3(1.0f, 20.0f, 90.0f)),
          glm::vec3(1.0f), 0.0f
         });
+
+    //BANCA IZQ
+    g_collidableObjects.push_back({ museo, glm::vec3(-16.4f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, 54.5f),
+               glm::vec3(1.0f, 10.0f, 60.5f)),
+         glm::vec3(1.0f), 0.0f
+        });
+
     //FIN DERECHO
-    g_collidableObjects.push_back({ museo, glm::vec3(16.0f, 0.0f, 0.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(17.2f, 0.0f, 0.0f),
          AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
                glm::vec3(1.0f, 20.0f, 90.0f)),
          glm::vec3(1.0f), 0.0f
         });
+
+    //BANCA DER
+    g_collidableObjects.push_back({ museo, glm::vec3(15.0f, 0.0f, 0.0f),
+         AABB(glm::vec3(-1.0f, 0.0f, 54.5f),
+               glm::vec3(1.0f, 10.0f, 60.5f)),
+         glm::vec3(1.0f), 0.0f
+        });
+
+
     //FIN FRONTAL
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 90.0f),
         AABB(glm::vec3(-60.0f, 0.0f, -1.0f),
@@ -1982,6 +2005,7 @@ void InitializeCollidableObjects() {
                glm::vec3(0.5f, 20.0f, 33.0f)),
          glm::vec3(1.0f), 0.0f
         });
+
     //Pared izquierda_02
     g_collidableObjects.push_back({ museo, glm::vec3(-66.0f, 0.0f, 0.0f),
          AABB(glm::vec3(-0.5f, 0.0f, -120.0f),
@@ -2014,10 +2038,11 @@ void InitializeCollidableObjects() {
         });
     //Pared frontal_izq
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
-         AABB(glm::vec3(-32.0f, 0.0f, -0.5f),
+         AABB(glm::vec3(-35.0f, 0.0f, -0.5f),
                glm::vec3(-10.0f, 20.0f, 0.5f)),
          glm::vec3(1.0f), 0.0f
         });
+
     //Pared frontal_der
     g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 32.0f),
          AABB(glm::vec3(10.0f, 0.0f, -0.5f),
