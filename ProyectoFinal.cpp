@@ -175,7 +175,7 @@ bool g_e_keyPressed = false;      // Para la tecla "E" (Usar)
 // --- FIN DE MODIFICADO ---
 
 // --- VARIABLES DE INTERACCIÓN ---
-bool showInfoPanel = false;		  // Para mostrar/ocultar el panel de información
+bool showInfoPanel = true;		  // Para mostrar/ocultar el panel de información
 // --- FIN DE VARIABLES DE INTERACCIÓN ---
 
 // --- ¡NUEVO! Variables de Inspección ---
@@ -232,7 +232,7 @@ AABB characterBoundingBox;
 // Variables para debug de colisiones
 unsigned int debugVAO, debugVBO;
 bool showCollisionBoxes = false; // Presiona C para mostrar/ocultar
-bool showHelp = false; // Variable para mostrar/ocultar ayuda
+bool showHelp = true; // Variable para mostrar/ocultar ayuda
 std::list<std::string> g_HelpText;
 std::string helpTitle = "CONTROLES DEL JUEGO";
 
@@ -476,7 +476,6 @@ void InitializeHelpText() {
     g_HelpText.push_back("F1 - CAMARA FLOTANTE");
     g_HelpText.push_back("F2 - CAMARA 3ERA PERSONA");
     g_HelpText.push_back("F3 - CAMARA 1ERA PERSONA");
-    g_HelpText.push_back("C - MODO DEBUG");
     g_HelpText.push_back("SHIFT - CORRER");
     g_HelpText.push_back("FLECHAS - DESPLAZARTE (PERSONAJE)");
     g_HelpText.push_back("WASD - DESPLAZARTE (CAMARA FLOTANTE)");
@@ -916,7 +915,7 @@ void DrawHelpWindow() {
     float padding = 15.0f;
 
     float bgWidth = 350.0f;
-    float bgHeight = titleHeight + (totalHelpItems * lineHeight) + (padding * 2);
+    float bgHeight = titleHeight + (totalHelpItems * lineHeight) + (padding * 1.5);
 
     // Posición del fondo
     float bgX = x - 10.0f;
