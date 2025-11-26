@@ -268,6 +268,15 @@ glm::vec3 caracolPos = glm::vec3(65.0f, 3.7f, -81.00f);
 glm::vec3 cuadroPos = glm::vec3(-65.0f, 2.0f, -107.00f);
 glm::vec3 CuadroInformativoXiucoatlPOS = glm::vec3(3.0f, 0.0f, 5.0f);
 
+// ... (debajo de tus otros punteros de modelos)
+
+// --- VARIABLES DE LA FUENTE ---
+Model* fuenteBase;          // La estructura de piedra
+Model* fuenteAgua;          // El cilindro de agua
+Shader* waterScrollShader;  // El shader que acabas de crear
+GLuint waterTextureID;      // ID para la imagen del agua
+glm::vec3 fuentePos = glm::vec3(0.0f, 0.0f, 70.0f); // ¡Ajusta la posición aquí!
+
 Shader* mLightsShader;
 Shader* proceduralShader;
 Shader* wavesShader;
@@ -1037,6 +1046,26 @@ bool Start() {
     // Máximo número de huesos: 100
     dynamicShader->setBonesIDs(MAX_RIGGING_BONES);
 
+    // ... dentro de Start() ...
+
+    // 1. Cargar el Shader de Agua
+    waterScrollShader = new Shader("shaders/water_scroll.vs", "shaders/water_scroll.fs");
+
+    // 2. Cargar la Textura de Agua (Asegúrate de tener 'textures/water.jpg')
+    waterTextureID = loadTexture("textures/Agua.jpg");
+
+    // 3. Cargar los Modelos (Asegúrate de tener los FBX)
+    fuenteBase = new Model("models/proyectofinal/fuente_base.fbx");
+    fuenteAgua = new Model("models/proyectofinal/fuente_agua.fbx");
+
+    // 4. Añadir Colisión (Solo a la base, para no atravesarla)
+    // Ajusta el tamaño AABB según tu modelo real
+    g_collidableObjects.push_back({ fuenteBase, fuentePos,
+             AABB(glm::vec3(-12.5f, 0.0f, -11.5f),  // Min
+                  glm::vec3(10.0f, 1.5f, 11.0f)),   // Max
+             glm::vec3(1.0f), 0.0f
+        });
+
     // --- Carga de modelos modulares ---
     museo = new Model("models/proyectofinal/Entorno1.fbx");
     piso = new Model("models/proyectofinal/Piso.fbx");
@@ -1584,6 +1613,14 @@ bool Update() {
             model = glm::mat4(1.0f); model = glm::translate(model, caracolPos); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); caracol->Draw(*mLightsShader);
             model = glm::mat4(1.0f); model = glm::translate(model, cuadroPos); model = glm::scale(model, glm::vec3(3.0f, 3.5f, 3.0f)); model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); mLightsShader->setMat4("model", model); cuadro->Draw(*mLightsShader);
 
+            // ... dentro del bloque mLightsShader ...
+
+    // Dibujar Base de la Fuente
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, fuentePos);
+            model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            mLightsShader->setMat4("model", model);
+            fuenteBase->Draw(*mLightsShader);
             // 2. Dibujar TODOS los objetos interactivos (OPacos)
             for (auto& obj : g_interactiveObjects) {
                 // Dibuja el objeto principal
@@ -1671,7 +1708,33 @@ bool Update() {
     {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // --- BLOQUE TRANSPARENTE --
 
+        // 1. Configurar Shader de Agua
+        waterScrollShader->use();
+        waterScrollShader->setMat4("projection", projection);
+        waterScrollShader->setMat4("view", view);
+
+        // 2. Configurar Matriz de Modelo
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, fuentePos); // Misma posición que la base
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        waterScrollShader->setMat4("model", model);
+
+        // 3. Enviar Tiempo para la Animación
+        waterScrollShader->setFloat("time", (float)glfwGetTime());
+        waterScrollShader->setFloat("scrollSpeed", 0.2f); // Velocidad del agua
+
+        // 4. Activar Textura y Dibujar
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, waterTextureID);
+        waterScrollShader->setInt("texture_diffuse1", 0);
+
+        fuenteAgua->Draw(*waterScrollShader);
+
+        // ... (Aquí iría el código de tus puertas de vidrio) ...
+
+      
 
         glassShader->use();
         glassShader->setMat4("projection", projection);
@@ -1887,19 +1950,19 @@ void InitializeCollidableObjects() {
         });
 
     //FIN IZQUIERDO
-    g_collidableObjects.push_back({ museo, glm::vec3(-15.0f, 0.0f, 0.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(-17.5f, 0.0f, 0.0f),
          AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
-               glm::vec3(1.0f, 20.0f, 70.0f)),
+               glm::vec3(1.0f, 20.0f, 90.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //FIN DERECHO
-    g_collidableObjects.push_back({ museo, glm::vec3(14.0f, 0.0f, 0.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(16.0f, 0.0f, 0.0f),
          AABB(glm::vec3(-1.0f, 0.0f, 30.0f),
-               glm::vec3(1.0f, 20.0f, 70.0f)),
+               glm::vec3(1.0f, 20.0f, 90.0f)),
          glm::vec3(1.0f), 0.0f
         });
     //FIN FRONTAL
-    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 68.0f),
+    g_collidableObjects.push_back({ museo, glm::vec3(0.0f, 0.0f, 90.0f),
         AABB(glm::vec3(-60.0f, 0.0f, -1.0f),
              glm::vec3(60.0f, 20.0f, 1.0f)),
         glm::vec3(1.0f), 0.0f
